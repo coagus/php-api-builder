@@ -1,0 +1,34 @@
+{
+  "name": "coagus/php-builder",
+  "description": "API Builder is a library designed to simplify the construction of APIs in PHP, ensuring clean, well-structured code, and providing out-of-the-box support for connecting a MySQL database as a resource.",
+  "type": "library",
+  "keywords": [
+        "php",
+        "API"
+    ],
+  "require-dev": {
+    "phpunit/phpunit": "^11.4"
+  },
+  "require": {
+    "firebase/php-jwt": "^6.10",
+    "monolog/monolog": "^3.7"
+  },
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "ApiBuilder\\": "src/",
+      "TestApi\\": "test/"
+    },
+    "files": [
+      "src/constants.php",
+      "src/helpers.php"
+    ]
+  },
+  "authors": [
+    {
+      "name": "Christian Agustin",
+      "email": "christian@agustin.gt",
+      "role": "Developer"
+    }
+  ]
+}

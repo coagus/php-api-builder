@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  mysql:
+    build:
+      context: ./resources/docker/mysql
+    image: mysql-server
+    container_name: api-db
+    environment:
+      MYSQL_DATABASE: apidb
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: Adm1ns
+      MYSQL_ROOT_PASSWORD: Adm1ns
+    ports:
+      - "3306:3306"
+    restart: always
+  php:
+    build:
+      context: ./resources/docker/php
+    image: php-server
+    container_name: api
+    ports:
+      - "80:80"
+    volumes:
+      - ${PWD}:/var/www/html
+    links:
+      - mysql
