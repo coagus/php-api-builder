@@ -1,6 +1,7 @@
 {
-  "name": "coagus/php-builder",
+  "name": "coagus/api-builder",
   "description": "API Builder is a library designed to simplify the construction of APIs in PHP, ensuring clean, well-structured code, and providing out-of-the-box support for connecting a MySQL database as a resource.",
+  "homepage": "https://github.com/coagus/api-builder",
   "type": "library",
   "keywords": [
         "php",
