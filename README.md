@@ -1,6 +1,8 @@
+![Latest Stable Version](https://poser.pugx.org/coagus/php-api-builder/v/stable) [![Total Downloads](https://poser.pugx.org/coagus/php-api-builder/downloads)](https://packagist.org/packages/firebase/php-jwt) [![License](https://poser.pugx.org/coagus/php-api-builder/license)](https://packagist.org/packages/firebase/php-jwt)
+
 # PHP API BUILDER
 
-API Builder is a library designed to simplify the construction of APIs in PHP, ensuring clean, well-structured code, and providing out-of-the-box support for connecting a MySQL database as a resource.
+A library designed to simplify the construction of APIs in PHP, ensuring clean, well-structured code, and providing out-of-the-box support for connecting a MySQL database as a resource.
 
 ## Installation
 
@@ -28,8 +30,8 @@ To maintain order in our API development, we define a name for our project from 
 ``` json
 {
   "require": {
-    "coagus/api-builder": "^0.1.1"
-  },
+    "coagus/php-api-builder": "v0.2.0"    
+  }
   "autoload": {
     "psr-4": {
       "Services\\": "services/"

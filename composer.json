@@ -12,8 +12,7 @@
     "phpunit/phpunit": "^11.4"
   },
   "require": {
-    "firebase/php-jwt": "^6.10",
-    "monolog/monolog": "^3.7"
+    "firebase/php-jwt": "^6.10"
   },
   "license": "MIT",
   "autoload": {
@@ -22,8 +21,9 @@
       "TestApi\\": "test/"
     },
     "files": [
-      "src/constants.php",
-      "src/helpers.php"
+      "src/helpers/constants.php",
+      "src/helpers/api-tools.php",
+      "src/helpers/utils.php"
     ]
   },
   "authors": [

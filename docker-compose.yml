@@ -5,7 +5,7 @@ services:
     build:
       context: ./resources/docker/mysql
     image: mysql-server
-    container_name: api-db
+    container_name: pab-db
     environment:
       MYSQL_DATABASE: apidb
       MYSQL_USER: admin
@@ -18,7 +18,7 @@ services:
     build:
       context: ./resources/docker/php
     image: php-server
-    container_name: api
+    container_name: pab-api
     ports:
       - "80:80"
     volumes:

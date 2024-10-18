@@ -6,6 +6,6 @@ RUN a2enmod rewrite && \
     php composer-setup.php  && \
     php -r "unlink('composer-setup.php');"  && \
     mv composer.phar /usr/local/bin/composer && \
-    apt install zip -y
+    apt update && install zip -y
 
 EXPOSE 80
