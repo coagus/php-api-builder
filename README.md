@@ -12,7 +12,35 @@ composer require coagus/php-api-builder
 
 ## Get Started
 
-1. Add .htaccess file
+For the proper functioning of the API, it is necessary to modify the composer.json file and add the .htaccess and index.php files. With this, we can start the development.
+
+``` sh
+|-- composer.json
+|-- .htaccess
+|-- index.php
+|-- services
+```
+
+### composer.json
+
+To maintain order in our API development, we define a name for our project from which all our services will branch out. For this example, my project will be called ‘Services,’ and I will specify that it will be developed in the ‘services’ folder.
+
+``` json
+{
+  "require": {
+    "coagus/api-builder": "^0.1.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Services\\": "services/"
+    }
+  }
+}
+```
+
+### .htaccess
+
+This file defines the behavior of our server. Generally, the entry point is our index.php, and the URL does not define the folders within the server.
 
 ``` sh
 # Disable directory listing (prevents showing files in an empty directory)
@@ -34,22 +62,9 @@ RewriteRule ^ index.php [QSA,L]
 </IfModule>
 ```
 
-2. Modify composer.json, add your own autoload with the project name, in this case is Service
+### index.php
 
-``` json
-{
-  "require": {
-    "coagus/api-builder": "^0.1.1"
-  },
-  "autoload": {
-    "psr-4": {
-      "Services\\": "services/"
-    }
-  }
-}
-```
-
-3. Add index.php
+The index.php is the entry point to the API; it only defines the project specified in its namespace.
 
 ``` php
 <?php
@@ -59,7 +74,9 @@ $api = new ApiBuilder\API();
 $api->run('Services');
 ```
 
-4. Create a Demo service file in services/Demo.php
+## Examples Demo Service
+
+Create a Demo service file in services/Demo.php
 
 ``` php
 <?php
@@ -81,17 +98,9 @@ class Demo
 
 ```
 
-The files will see like that:
+### GET http://localhost/api/v1/demo 
 
-``` sh
-|-- composer.json
-|-- .htaccess
-|-- index.php
-|-- services
-|   `-- Demo.php
-```
-
-5. Test in postman or other application, execute a get http://localhost/api/v1/demo , the result will be:
+Result:
 
 ``` json
 {
@@ -100,7 +109,18 @@ The files will see like that:
 }
 ```
 
-6. Execute a post http://localhost/api/v1/demo/hello , the result will be:
+### POST http://localhost/api/v1/demo/hello
+
+Request:
+
+``` json
+
+{
+  "name":"Agustin"
+}
+```
+
+Result: 
 
 ``` json
 {

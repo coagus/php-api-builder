@@ -9,3 +9,4 @@
 /test export-ignore
 /docker-compose.yml export-ignore
 /index.php export-ignore
+/composer.lock export-ignore
