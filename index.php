@@ -1,7 +1,5 @@
 <?php
 require_once 'vendor/autoload.php';
 
-use ApiBuilder\API;
-
-$api = new API();
+$api = new ApiBuilder\API();
 $api->run('TestApi');
