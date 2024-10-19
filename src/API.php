@@ -11,20 +11,16 @@ class API
     $this->setCors();
     $requestUri = $this->getRequestUri();
 
-    try {
-      if (empty($requestUri))
-        error('Request not exists.', SC_ERROR_BAD_REQUEST);
+    if (empty($requestUri))
+      error('Request not exists.', SC_ERROR_BAD_REQUEST);
 
-      $resourceController = $this->getResourceService($requestUri);
-      $operation = $this->getOperation($requestUri);
+    $resourceService = $this->getResourceService($requestUri);
+    $operation = $this->getOperation($requestUri);
 
-      if (!is_callable(array($resourceController, $operation)))
-        error("Operation '$operation' not exists.", SC_ERROR_BAD_REQUEST);
+    if (!is_callable(array($resourceService, $operation)))
+      error("Operation '$operation' not exists.", SC_ERROR_BAD_REQUEST);
 
-      call_user_func(array($resourceController, $operation));
-    } catch (ApiException $e) {
-      $e->responseException();
-    }
+    call_user_func(array($resourceService, $operation));
   }
 
   private function setCors()
@@ -51,14 +47,16 @@ class API
 
   private function getResourceService($requestUri)
   {
+    if (!isset($requestUri[URI_RESOURCE]) || $requestUri[URI_RESOURCE] == '')
+      error('Do not have resource (url/api/version/[resource!!!]', SC_ERROR_BAD_REQUEST);
+
     $resource = $requestUri[URI_RESOURCE];
-
-    if ($resource == '')
-      error('Do not have resource (url/api/version/[resource!!!].');
-
     $singularResource = toSingular($resource);
     $service = "$this->project\\" . ucwords($singularResource);
-    $class = class_exists($service) ? $service : 'APIBuilder\\Service';
+    $class = class_exists($service) ? $service : SERVICE_CLASS;
+
+    if (!class_exists($class))
+      error('Fatal Error: Main Service Class is not defined.');
 
     $prmId = isset($requestUri[URI_OPERATION_PRIMARY_ID]) && is_numeric($requestUri[URI_OPERATION_PRIMARY_ID])
       ? $requestUri[URI_OPERATION_PRIMARY_ID] : '';
