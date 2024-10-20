@@ -30,34 +30,12 @@ function getStrArray($array)
   return $str;
 }
 
-function logError($e, $msg = '', $qry = '')
+function logError($errno, $errstr, $errfile = '', $errline = '')
 {
-  $date = new DateTimeImmutable();
-  $codeError = $date->format("isu");
-  $filename = "log/error.csv";
-  $dirname = dirname($filename);
-  $mkdir = false;
-
-  if (is_dir($dirname)) {
-    if (filesize($dirname) > 10000) {
-      rename($filename, $filename . $date->format("Y-m-d-is"));
-      $mkdir = true;
-    }
-  } else {
-    $mkdir = true;
-  }
-
-  if ($mkdir) {
-    mkdir($dirname, 0755, true);
-    $handle = fopen($filename, "a");
-    $reg = array('Datetime', 'CodeError', 'Message', 'Exception', 'Query', 'SessionId');
-    fputcsv($handle, $reg);
-    fclose($handle);
-  }
-
-  $handle = fopen($filename, "a");
-  $reg = array(date("Y-m-d H:i:s"), $codeError, $msg, $e, $qry, $_SESSION["id"]);
-  fputcsv($handle, $reg);
-  fclose($handle);
-  return $codeError;
+  $log = new Monolog\Logger(SERVICE_LOG);
+  $log->pushHandler(new Monolog\Handler\RotatingFileHandler(SERVICE_LOG_FILE, 5, Monolog\Logger::ERROR));
+  $error = $errno >= 400 ? '[Controlled Error]' : '[Error]';
+  $error .= $errfile == '' ? '' : "[File: $errfile]";
+  $error .= $errline == '' ? '' : "[Line: $errline]";
+  $log->error("$error $errstr");
 }

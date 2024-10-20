@@ -12,7 +12,8 @@
     "phpunit/phpunit": "^11.4"
   },
   "require": {
-    "firebase/php-jwt": "^6.10"
+    "firebase/php-jwt": "^6.10",
+    "monolog/monolog": "^3.7"
   },
   "license": "MIT",
   "autoload": {

@@ -14,3 +14,5 @@ define('SC_ERROR_NOT_FOUND', 404);
 
 # Service
 define('SERVICE_CLASS', 'APIBuilder\\Service');
+define('SERVICE_LOG', 'API');
+define('SERVICE_LOG_FILE', 'log/api.log');

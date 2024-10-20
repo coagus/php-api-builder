@@ -29,27 +29,24 @@ function error($msg, $code = SC_ERROR_NOT_FOUND)
 
 function errorHandler($errno, $errstr, $errfile, $errline)
 {
+  logError($errno, $errstr, $errfile, $errline);
   response($errno < 400 ? SC_ERROR_NOT_FOUND : $errno, $errstr);
 }
 
 function exceptionHandler($exception)
 {
-  response(SC_ERROR_NOT_FOUND, 'Exception Error: ' . $exception->getMessage());
-  // TODO: para administrar error en log:
-  // $exception->getFile()
-  // $exception->getLine()
+  $error = $exception->getMessage() . ', ' . $exception->getStrArray();
+  logError('', $error, $exception->getFile(), $exception->getLine());
+  response(SC_ERROR_NOT_FOUND, 'Exception Error: ' . $error);
 }
 
-// Manejador de errores fatales
 function shutdownHandler()
 {
   $error = error_get_last();
-  if ($error !== null && $error['type'] === E_ERROR)
+  if ($error !== null && $error['type'] === E_ERROR) {
+    logError('', $error['message'], $error['file'], $error['line']);
     response(SC_ERROR_NOT_FOUND, 'Fatal Error: ' . $error['message']);
-
-  // TODO: para administrar error en log:
-  // $error['file'],
-  // $error['line'],  
+  }
 }
 
 set_error_handler("errorHandler");
