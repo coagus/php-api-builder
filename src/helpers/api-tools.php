@@ -1,7 +1,23 @@
 <?php
+$debugData;
+
+function debug($tag, $data)
+{
+  global $debugData;
+  if (!is_array($debugData))
+    $debugData = [];
+
+  array_push($debugData, array($tag => $data));
+}
+
 function response($code, $result)
 {
   $successful = $code < 400;
+  global $debugData;
+
+  if (is_array($debugData) && count($debugData) > 0)
+    $result = array('data' => $result, 'debug' => $debugData);
+
   $json = array(
     'successful' => $successful,
     'result' => $result
@@ -33,10 +49,10 @@ function errorHandler($errno, $errstr, $errfile, $errline)
   response($errno < 400 ? SC_ERROR_NOT_FOUND : $errno, $errstr);
 }
 
-function exceptionHandler($exception)
+function exceptionHandler($e)
 {
-  $error = $exception->getMessage() . ', ' . $exception->getStrArray();
-  logError('', $error, $exception->getFile(), $exception->getLine());
+  $error = $e->getMessage() . ', trace: ' .$e->getTraceAsString();
+  logError('', $error, $e->getFile(), $e->getLine());
   response(SC_ERROR_NOT_FOUND, 'Exception Error: ' . $error);
 }
 
