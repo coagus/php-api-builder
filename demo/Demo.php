@@ -1,9 +1,9 @@
 <?php
-namespace TestApi;
+namespace DemoApi;
 
 class Demo
 {
-  public function get()
+  public function post()
   {
     success('Hello World!');
   }

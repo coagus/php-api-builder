@@ -30,7 +30,7 @@ To maintain order in our API development, we define a name for our project from 
 ``` json
 {
   "require": {
-    "coagus/php-api-builder": "v0.2.0"    
+    "coagus/php-api-builder": "v0.6.0"    
   }
   "autoload": {
     "psr-4": {
@@ -72,8 +72,8 @@ The index.php is the entry point to the API; it only defines the project specifi
 <?php
 require_once 'vendor/autoload.php';
 
-$api = new ApiBuilder\API();
-$api->run('Services');
+$api = new ApiBuilder\API('Services');
+$api->run();
 ```
 
 ## Examples Demo Service

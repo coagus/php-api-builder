@@ -19,7 +19,7 @@
   "autoload": {
     "psr-4": {
       "ApiBuilder\\": "src/",
-      "TestApi\\": "test/"
+      "DemoApi\\": "demo/"
     },
     "files": [
       "src/helpers/constants.php",

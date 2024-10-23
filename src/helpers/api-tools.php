@@ -25,7 +25,6 @@ function response($code, $result)
 
   header('Content-Type: application/json');
   echo json_encode($json, http_response_code($code));
-  exit;
 }
 
 function getImput()
@@ -46,22 +45,19 @@ function error($msg, $code = SC_ERROR_NOT_FOUND)
 function errorHandler($errno, $errstr, $errfile, $errline)
 {
   logError($errno, $errstr, $errfile, $errline);
-  response($errno < 400 ? SC_ERROR_NOT_FOUND : $errno, $errstr);
+  throw new \Exception($errstr, $errno < 400 ? SC_ERROR_NOT_FOUND : $errno);
 }
 
 function exceptionHandler($e)
 {
-  $error = $e->getMessage() . ', trace: ' .$e->getTraceAsString();
-  logError('', $error, $e->getFile(), $e->getLine());
-  response(SC_ERROR_NOT_FOUND, 'Exception Error: ' . $error);
+  errorHandler(SC_ERROR_NOT_FOUND, $e->getMessage() . ', trace: ' . $e->getTraceAsString(), $e->getFile(), $e->getLine());
 }
 
 function shutdownHandler()
 {
   $error = error_get_last();
   if ($error !== null && $error['type'] === E_ERROR) {
-    logError('', $error['message'], $error['file'], $error['line']);
-    response(SC_ERROR_NOT_FOUND, 'Fatal Error: ' . $error['message']);
+    errorHandler(SC_ERROR_NOT_FOUND, 'Fatal Error: ' . $error['message'], $error['file'], $error['line']);    
   }
 }
 

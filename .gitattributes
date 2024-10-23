@@ -6,7 +6,8 @@
 /.php-cs-fixer.dist.php export-ignore
 /.htaccess export-ignore
 /resources export-ignore
-/test export-ignore
+/demo export-ignore
+/tests export-ignore
 /docker-compose.yml export-ignore
 /index.php export-ignore
 /composer.lock export-ignore

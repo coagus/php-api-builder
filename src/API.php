@@ -5,22 +5,29 @@ class API
 {
   private $project;
 
-  public function run($project)
+  public function __CONSTRUCT($project)
   {
     $this->project = $project;
-    $this->setCors();
-    $requestUri = $this->getRequestUri();
+  }
+  public function run()
+  {
+    try {
+      $this->setCors();
+      $requestUri = $this->getRequestUri();
 
-    if (empty($requestUri))
-      error('Request not exists.', SC_ERROR_BAD_REQUEST);
+      if (empty($requestUri))
+        error('Request not exists.', SC_ERROR_BAD_REQUEST);
 
-    $resourceService = $this->getResourceService($requestUri);
-    $operation = $this->getOperation($requestUri);
+      $instanceResourceService = $this->getInstanceResourceService($requestUri);
+      $operation = $this->getOperation($requestUri);
 
-    if (!is_callable(array($resourceService, $operation)))
-      error("Operation '$operation' not exists.", SC_ERROR_BAD_REQUEST);
+      if (!is_callable(array($instanceResourceService, $operation)))
+        error("Operation '$operation' not exists.", SC_ERROR_BAD_REQUEST);
 
-    call_user_func(array($resourceService, $operation));
+      call_user_func(array($instanceResourceService, $operation));
+    } catch (\Exception $e) {
+      return response($e->getCode() < 400 ? SC_ERROR_NOT_FOUND : $e->getCode(), $e->getMessage());
+    }
   }
 
   private function setCors()
@@ -45,18 +52,29 @@ class API
     return array_filter(explode('/', $reqUri));
   }
 
-  private function getResourceService($requestUri)
+  private function getResource($requestUri)
   {
     if (!isset($requestUri[URI_RESOURCE]) || $requestUri[URI_RESOURCE] == '')
-      error('Do not have resource (url/api/version/[resource!!!]', SC_ERROR_BAD_REQUEST);
+      error('Do not have resource (host/api/version/[resource!!!].', SC_ERROR_BAD_REQUEST);
 
-    $resource = $requestUri[URI_RESOURCE];
-    $singularResource = toSingular($resource);
-    $service = "$this->project\\" . ucwords($singularResource);
+    return toPascalCase($requestUri[URI_RESOURCE]);
+  }
+
+  private function getClassResource($resource)
+  {
+    $service = "$this->project\\$resource";
     $class = class_exists($service) ? $service : SERVICE_CLASS;
 
     if (!class_exists($class))
-      error('Fatal Error: Main Service Class is not defined.');
+      error("$service not exists and Main Service Class is not defined.");
+
+    return $class;
+  }
+
+  private function getInstanceResourceService($requestUri)
+  {
+    $resource = $this->getResource($requestUri);
+    $class = $this->getClassResource($resource);
 
     $prmId = isset($requestUri[URI_OPERATION_PRIMARY_ID]) && is_numeric($requestUri[URI_OPERATION_PRIMARY_ID])
       ? $requestUri[URI_OPERATION_PRIMARY_ID] : '';
@@ -64,7 +82,7 @@ class API
     $scnId = isset($requestUri[URI_SECONDARY_ID]) && is_numeric($requestUri[URI_SECONDARY_ID])
       ? $requestUri[URI_SECONDARY_ID] : '';
 
-    return new $class($singularResource, $prmId, $scnId);
+    return new $class($resource, $prmId, $scnId);
   }
 
   private function getOperation($requestUri)
@@ -72,7 +90,7 @@ class API
     $operation = isset($requestUri[URI_OPERATION])
       ? $requestUri[URI_OPERATION]
       : (isset($requestUri[URI_OPERATION_PRIMARY_ID]) && !is_numeric($requestUri[URI_OPERATION_PRIMARY_ID])
-        ? ucwords($requestUri[URI_OPERATION_PRIMARY_ID])
+        ? toPascalCase($requestUri[URI_OPERATION_PRIMARY_ID])
         : '');
     return strtolower($_SERVER['REQUEST_METHOD']) . $operation;
   }

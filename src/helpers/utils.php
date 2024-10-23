@@ -4,6 +4,16 @@ function toSnakeCase($pacalOrCamel)
   return ltrim(strtolower(preg_replace("/[A-Z]/", "_" . "$0", $pacalOrCamel)), '_');
 }
 
+function toPascalCase($snakeCase)
+{
+  $data = array_filter(explode('-', strtolower($snakeCase)));
+  $pascalCase = '';
+  foreach ($data as $word)
+    $pascalCase .= ucwords($word);
+
+  return $pascalCase;
+}
+
 function toSnakeCasePlural($pacalOrCamel)
 {
   $poc = toSnakeCase($pacalOrCamel);
