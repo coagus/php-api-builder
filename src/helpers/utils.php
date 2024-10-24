@@ -49,3 +49,22 @@ function logError($errno, $errstr, $errfile = '', $errline = '')
   $error .= $errline == '' ? '' : "[Line: $errline]";
   $log->error("$error $errstr");
 }
+
+function inEnv($key) {
+  if (!isset($_ENV[$key])) {
+    logError(SC_ERROR_NOT_FOUND, "$key not configured in .env file");
+    return false;
+  }
+
+  return true;
+}
+
+function loadEnv() {
+  if (!file_exists($_SERVER['DOCUMENT_ROOT'] . '/.env')) {
+    logError(SC_ERROR_NOT_FOUND, 'Not exists .env file.');
+    error('Environment Error');
+  }
+
+  $dotenv = Dotenv\Dotenv::createImmutable($_SERVER['DOCUMENT_ROOT']);
+  $dotenv->load();
+}

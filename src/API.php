@@ -12,6 +12,7 @@ class API
   public function run()
   {
     try {
+      loadEnv();
       $this->setCors();
       $requestUri = $this->getRequestUri();
 
@@ -26,7 +27,9 @@ class API
 
       call_user_func(array($instanceResourceService, $operation));
     } catch (\Exception $e) {
-      return response($e->getCode() < 400 ? SC_ERROR_NOT_FOUND : $e->getCode(), $e->getMessage());
+      $errno = $e->getCode() < 400 ? SC_ERROR_NOT_FOUND : $e->getCode();
+      logError($errno, $e->getMessage(), $e->getFile(), $e->getLine());
+      return response($errno, $e->getMessage());
     }
   }
 

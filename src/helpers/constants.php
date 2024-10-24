@@ -16,3 +16,10 @@ define('SC_ERROR_NOT_FOUND', 404);
 define('SERVICE_CLASS', 'APIBuilder\\Service');
 define('SERVICE_LOG', 'API');
 define('SERVICE_LOG_FILE', 'log/api.log');
+
+# DB Key Environment
+define('HOST', 'DB_HOST');
+define('NAME', 'DB_NAME');
+define('USERNAME', 'DB_USERNAME');
+define('PASSWORD', 'DB_PASSWORD');
+define('CHARSET', 'DB_CHARSET');

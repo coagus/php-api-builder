@@ -23,7 +23,6 @@ function response($code, $result)
     'result' => $result
   );
 
-  header('Content-Type: application/json');
   echo json_encode($json, http_response_code($code));
 }
 
@@ -39,7 +38,7 @@ function success($result, $code = SC_SUCCESS_OK)
 
 function error($msg, $code = SC_ERROR_NOT_FOUND)
 {
-  errorHandler($code, $msg, '', '');
+  throw new \Exception($msg, $code);
 }
 
 function errorHandler($errno, $errstr, $errfile, $errline)
@@ -48,19 +47,15 @@ function errorHandler($errno, $errstr, $errfile, $errline)
   throw new \Exception($errstr, $errno < 400 ? SC_ERROR_NOT_FOUND : $errno);
 }
 
-function exceptionHandler($e)
-{
-  errorHandler(SC_ERROR_NOT_FOUND, $e->getMessage() . ', trace: ' . $e->getTraceAsString(), $e->getFile(), $e->getLine());
-}
-
 function shutdownHandler()
 {
   $error = error_get_last();
   if ($error !== null && $error['type'] === E_ERROR) {
-    errorHandler(SC_ERROR_NOT_FOUND, 'Fatal Error: ' . $error['message'], $error['file'], $error['line']);    
+    logError(SC_ERROR_NOT_FOUND, $error['message'], $error['file'], $error['line']);
+    response(SC_ERROR_NOT_FOUND, $error['message']);
   }
 }
 
+ini_set('display_errors', '0');
 set_error_handler("errorHandler");
-set_exception_handler("exceptionHandler");
 register_shutdown_function("shutdownHandler");
