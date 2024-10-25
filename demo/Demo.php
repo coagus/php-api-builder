@@ -1,21 +1,33 @@
 <?php
 namespace DemoApi;
 
-use ApiBuilder\ORM\DataBase;
+use DemoApi\Entities\User;
 
 class Demo
 {
-  public function post()
+  public function get()
   {
-    $db = new DataBase();
-    // $db->mutation("insert into users (name, username, password, email, active, role_id) values ('Agustin','coagus','abc123','algo@algo.com',0,1)");
-    $result = $db->query("select * from user", false);
-    success($result);
+    success('Hello World!');
   }
 
   public function postHello()
   {
     $input = getImput();
     success('Hello ' . $input['name'] . '!');
+  }
+
+  public function getUser()
+  {
+    $user = new User();
+    // $user->name = 'Claudia Aragón';
+    // $user->username = 'test2';
+    // $user->password = 'abc123';
+    // $user->email = 'otro@otro.com';
+    // $user->active = 1;
+    // $user->roleId = 1;
+    // $user->save();
+
+    $user->delete(2);
+    success($user->getAll());
   }
 }

@@ -10,11 +10,11 @@ class DataBase
 
   public function __CONSTRUCT()
   {
-    if (!inEnv(HOST) || !inEnv(NAME) || !inEnv(CHARSET) || !inEnv(USERNAME) || !inEnv(PASSWORD))
+    if (!inEnv(HOST) || !inEnv(DBNAME) || !inEnv(CHARSET) || !inEnv(USERNAME) || !inEnv(PASSWORD))
       error('Database environment Error.');
 
     try {
-      $dsn = 'mysql:host=' . $_ENV[HOST] . ';dbname=' . $_ENV[NAME] . ';charset=' . $_ENV[CHARSET];
+      $dsn = 'mysql:host=' . $_ENV[HOST] . ';dbname=' . $_ENV[DBNAME] . ';charset=' . $_ENV[CHARSET];
       $this->pdo = new PDO($dsn, $_ENV[USERNAME], $_ENV[PASSWORD]);
       $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     } catch (PDOException $e) {
@@ -75,5 +75,19 @@ class DataBase
       logError(SC_ERROR_NOT_FOUND, $e->getMessage(), $e->getFile(), $e->getLine());
       error("Database Query Error.");
     }
+  }
+
+  public function lastInsertId()
+  {
+    return $this->pdo->lastInsertId();
+  }
+
+  public function existsEntity($entity)
+  {
+    $qry = "SELECT COUNT(1) AS cnt FROM information_schema.tables 
+            WHERE table_schema = '" . $_ENV[DBNAME] . "' 
+            AND table_name = '$entity'";
+
+    return $this->query($qry)->cnt == '1';
   }
 }

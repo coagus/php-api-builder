@@ -66,10 +66,10 @@ class API
   private function getClassResource($resource)
   {
     $service = "$this->project\\$resource";
-    $class = class_exists($service) ? $service : SERVICE_CLASS;
+    $class = class_exists($service) ? $service : APIDB;
 
     if (!class_exists($class))
-      error("$service not exists and Main Service Class is not defined.");
+      error("$service not exists and APIDB Class is not defined.");
 
     return $class;
   }
@@ -85,7 +85,7 @@ class API
     $scnId = isset($requestUri[URI_SECONDARY_ID]) && is_numeric($requestUri[URI_SECONDARY_ID])
       ? $requestUri[URI_SECONDARY_ID] : '';
 
-    return new $class($resource, $prmId, $scnId);
+    return new $class($this->project, $resource, $prmId, $scnId);
   }
 
   private function getOperation($requestUri)
