@@ -60,4 +60,26 @@ class APIDB
   {
     $this->save();
   }
+
+  public function get()
+  {    
+    $entity = $this->getEmptyEntity();
+    $result = $this->priId == '' ? $entity->getAll() : $entity->getById($this->priId);
+
+    if (empty($result))
+      error('Not exists');
+
+    success($result);
+  }
+
+  public function put()
+  {
+    $this->save($this->priId);
+  } 
+  
+  public function delete()
+  {
+    $this->getEmptyEntity()->delete($this->priId);
+    success('Deleted!');
+  }
 }
