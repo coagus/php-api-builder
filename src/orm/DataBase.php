@@ -31,41 +31,30 @@ class DataBase
     } catch (PDOException $e) {
       logError(SC_ERROR_NOT_FOUND, $e->getMessage(), $e->getFile(), $e->getLine());
       error("Database Mutation Error.");
+      return false;
     }
   }
 
   public function query($query, $single = true, $order = '')
   {
     try {
-      if ($single) {
-        $stm = $this->pdo->prepare($query);
-        $stm->execute();
-        return $stm->fetch(PDO::FETCH_OBJ);
-      }
+      if ($single)
+        return $this->pdo->query($query)->fetch(PDO::FETCH_OBJ);
 
-      $qryCount = "SELECT COUNT(1) as quantity FROM ($query) query";
-      $stm = $this->pdo->prepare($qryCount);
-      $stm->execute();
-      $total = intval($stm->fetch(PDO::FETCH_OBJ)->quantity);
+      $qryCount = "SELECT COUNT(1) as cnt FROM ($query) query";
+      $count = intval($this->pdo->query($qryCount)->fetch(PDO::FETCH_OBJ)->cnt);
 
-      $rowsPerPage =
-        !isset($_REQUEST['rowsPerPage']) ? '10' 
-        : ($_REQUEST['rowsPerPage'] == '-1' ? $total : $_REQUEST['rowsPerPage']);
+      $page = $_REQUEST['page'] ?? '0';
+      $rowsPerPage = $_REQUEST['rowsPerPage'] ?? '10';
+      $rowsPerPage = $rowsPerPage === '-1' ? $count : $rowsPerPage;
+      $start = (int) $page * (int) $rowsPerPage;
 
-      $page = isset($_REQUEST['page']) ? $_REQUEST['page'] : '0';
-      $start = strval($page) * strval($rowsPerPage);
-
-      $query = "SELECT * FROM ($query) query";
-      $query .= $order == '' ? '' : ' ORDER BY ' . $order;
-      $query .= " LIMIT $start, $rowsPerPage";
-
-      $stm = $this->pdo->prepare($query);
-      $stm->execute();
-      $data = $stm->fetchAll(PDO::FETCH_OBJ);
+      $query = "SELECT * FROM ($query) query" . ($order ? " ORDER BY $order" : "") . " LIMIT $start, $rowsPerPage";
+      $data = $this->pdo->query($query)->fetchAll(PDO::FETCH_OBJ);
 
       return [
         "pagination" => [
-          "count" => $total,
+          "count" => $count,
           "page" => $page,
           "rowsPerPage" => $rowsPerPage
         ],
@@ -84,10 +73,10 @@ class DataBase
 
   public function existsEntity($entity)
   {
-    $qry = "SELECT COUNT(1) AS cnt FROM information_schema.tables 
+    $query = "SELECT COUNT(1) AS cnt FROM information_schema.tables 
             WHERE table_schema = '" . $_ENV[DBNAME] . "' 
             AND table_name = '$entity'";
 
-    return $this->query($qry)->cnt == '1';
+    return $this->query($query)->cnt == '1';
   }
 }

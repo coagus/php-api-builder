@@ -8,6 +8,7 @@ class APITest extends TestCase
 
     protected function setUp(): void
     {
+        $_SERVER['DOCUMENT_ROOT'] = __DIR__ . '/../';
         $this->api = new API('Tests');
     }
 
@@ -22,7 +23,7 @@ class APITest extends TestCase
         $requestUri = $method->invoke($this->api);
 
         $this->assertIsArray($requestUri);
-        $this->assertEquals(['host','api', 'v1', 'demo'], $requestUri);
+        $this->assertEquals(['host', 'api', 'v1', 'demo'], $requestUri);
     }
 
     public function testGetOperationGet()
@@ -248,8 +249,8 @@ class APITest extends TestCase
         $this->api->run();
         $output = ob_get_clean();
 
-        $expected = '{"successful": false,"result": "' . "Tests\\\\ClassTest" . ' not exists and Main Service Class is not defined."}';
-        
+        $expected = '{"successful": false,"result": "Resource or Entity \'class_tests\' not exists with \'POST\' method."}';
+
         $this->assertEquals(
             json_decode($expected, true),
             json_decode($output, true)
