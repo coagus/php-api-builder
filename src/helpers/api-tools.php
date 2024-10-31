@@ -1,15 +1,6 @@
 <?php
 $debugData;
 
-function debug($tag, $data)
-{
-  global $debugData;
-  if (!is_array($debugData))
-    $debugData = [];
-
-  array_push($debugData, array($tag => $data));
-}
-
 function response($code, $result)
 {
   $successful = $code < 400;
@@ -24,6 +15,15 @@ function response($code, $result)
   );
 
   echo json_encode($json, http_response_code($code));
+}
+
+function debug($tag, $data)
+{
+  global $debugData;
+  if (!is_array($debugData))
+    $debugData = [];
+
+  array_push($debugData, array($tag => $data));
 }
 
 function getImput()
