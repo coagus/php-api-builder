@@ -6,9 +6,19 @@ class APITest extends TestCase
 {
     private $api;
 
+    public static function setUpBeforeClass(): void
+    {
+        eval ("
+            namespace ApiBuilder; 
+            function loadEnv() {    
+                \$dotenv = \\Dotenv\\Dotenv::createImmutable(__DIR__,'/../example.env');
+                \$dotenv->load();
+            }
+        ");
+    }
+
     protected function setUp(): void
     {
-        $_SERVER['DOCUMENT_ROOT'] = __DIR__ . '/../';
         $this->api = new API('Tests');
     }
 

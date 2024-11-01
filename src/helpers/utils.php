@@ -4,9 +4,9 @@ function toSnakeCase($pacalOrCamel)
   return ltrim(strtolower(preg_replace("/[A-Z]/", "_" . "$0", $pacalOrCamel)), '_');
 }
 
-function toPascalCase($snakeCase)
+function toPascalCase($kebabCase)
 {
-  $data = array_filter(explode('-', strtolower($snakeCase)));
+  $data = array_filter(explode('-', strtolower($kebabCase)));
   $pascalCase = '';
   foreach ($data as $word)
     $pascalCase .= ucwords($word);
@@ -25,19 +25,6 @@ function toSingular($word)
   return substr($word, -3) == 'ies'
     ? substr($word, 0, -3) . 'y'
     : (substr($word, -1) == 's' ? substr($word, 0, -1) : $word);
-}
-
-function toKebabCase($pacalOrCamel)
-{
-  return str_replace('_', '-', toSnakeCase($pacalOrCamel));
-}
-
-function getStrArray($array)
-{
-  $str = '';
-  foreach ($array as $s)
-    $str .= ($str == '' ? '' : ',') . $s;
-  return $str;
 }
 
 function logError($errno, $errstr, $errfile = '', $errline = '')
