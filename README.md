@@ -1,4 +1,6 @@
-![Latest Stable Version](https://poser.pugx.org/coagus/v/stable) [![Total Downloads](https://poser.pugx.org/coagus/downloads)](https://packagist.org/packages/firebase/php-jwt) [![License](https://poser.pugx.org/coagus/license)](https://packagist.org/packages/firebase/php-jwt)
+[![Latest Stable Version](https://poser.pugx.org/firebase/php-jwt/v/stable)](https://packagist.org/packages/coagus/php-api-builder)
+[![Total Downloads](https://poser.pugx.org/coagus/php-api-builder/downloads)](https://packagist.org/packages/coagus/php-api-builder) 
+[![License](https://poser.pugx.org/coagus/php-api-builder/license)](https://packagist.org/packages/coagus/php-api-builder)
 
 # PHP API BUILDER
 
