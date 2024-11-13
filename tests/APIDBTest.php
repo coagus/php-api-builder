@@ -65,7 +65,7 @@ class APIDBTest extends TestCase
     $method->invokeArgs($this->apiDB, []);
     $output = ob_get_clean();
 
-    $expected = '{"successful":true,"result":{"id":"2"}}';
+    $expected = '{"successful":true,"result":{"data":"testId"}}';
     $this->assertEquals(
       json_decode($expected, true),
       json_decode($output, true)
@@ -82,7 +82,7 @@ class APIDBTest extends TestCase
     $method->invokeArgs($this->apiDB, ['1']);
     $output = ob_get_clean();
 
-    $expected = '{"successful":true,"result":{"id":"1"}}';
+    $expected = '{"successful":true,"result":{"data":"testId"}}';
     $this->assertEquals(
       json_decode($expected, true),
       json_decode($output, true)

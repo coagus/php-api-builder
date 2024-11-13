@@ -55,8 +55,8 @@ class APIDB
     $entity = $this->getFilledEntity();
     $entity->id = $id ?: null;
     $entity->save();
-    
-    success(['id' => $id ?: $entity->lastInsertId()]);
+
+    success($entity->getById($id ?: $entity->lastInsertId()));
   }
 
   public function post()
@@ -77,12 +77,19 @@ class APIDB
 
   public function put()
   {
+    if (!$this->getEmptyEntity()->getById($this->priId))
+      error('Not exists');
     $this->save($this->priId);
   }
 
   public function delete()
   {
-    $this->getEmptyEntity()->delete($this->priId);
+    $entity = $this->getEmptyEntity();
+
+    if (!$entity->getById($this->priId))
+      error('Not exists');
+
+    $entity->delete($this->priId);
     success('Deleted!');
   }
 }
