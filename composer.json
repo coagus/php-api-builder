@@ -12,14 +12,12 @@
     "phpunit/phpunit": "^11.4"
   },
   "require": {
+    "php": "^8.2",
     "firebase/php-jwt": "^6.10",
     "monolog/monolog": "^3.7",
     "vlucas/phpdotenv": "^5.6"
   },
   "license": "MIT",
-  "require": {
-        "php": "^8.2"
-    },
   "autoload": {
     "psr-4": {
       "ApiBuilder\\": "src/",
