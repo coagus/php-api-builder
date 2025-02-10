@@ -26,7 +26,7 @@ function debug($tag, $data)
   array_push($debugData, array($tag => $data));
 }
 
-function getImput()
+function getInput()
 {
   return json_decode(file_get_contents('php://input'), true);
 }

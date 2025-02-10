@@ -95,7 +95,7 @@ class Demo
 
   public function postHello()
   {
-    $input = getImput();
+    $input = getInput();
     success('Hello ' . $input['name'] . '!');
   }
 }

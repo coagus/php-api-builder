@@ -35,7 +35,7 @@ class APIDB
   {
     $entity = $this->getEmptyEntity();
 
-    $input = getImput();
+    $input = getInput();
 
     if (empty($input))
       error("input is empty.");
