@@ -27,7 +27,7 @@ class APIDBTest extends TestCase
     eval ("
       namespace ApiBuilder\ORM;
 
-      function getImput() {
+      function getInput() {
           return ['field' => 'Hello'];
       }
     ");
