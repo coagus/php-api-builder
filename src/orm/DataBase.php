@@ -19,7 +19,7 @@ class DataBase
       $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     } catch (PDOException $e) {
       logError(SC_ERROR_NOT_FOUND, $e->getMessage(), $e->getFile(), $e->getLine());
-      error("Database connection Error.");
+      error("Database connection Error:" . $e->getMessage());
     }
   }
 
