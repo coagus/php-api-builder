@@ -21,6 +21,9 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v4
 
+    - name: Update Composer lock file
+      run: composer update --no-install
+
     - name: Validate composer.json and composer.lock
       run: composer validate
 
