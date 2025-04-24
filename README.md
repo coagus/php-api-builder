@@ -1,8 +1,9 @@
 [![Latest Stable Version](https://poser.pugx.org/coagus/php-api-builder/v/stable)](https://packagist.org/packages/coagus/php-api-builder)
 [![Total Downloads](https://poser.pugx.org/coagus/php-api-builder/downloads)](https://packagist.org/packages/coagus/php-api-builder) 
 [![License](https://poser.pugx.org/coagus/php-api-builder/license)](https://packagist.org/packages/coagus/php-api-builder)
+[![PHP Composer](https://github.com/coagus/php-api-builder/workflows/PHP%20Composer/badge.svg)](https://github.com/coagus/php-api-builder/actions)
 
-# PHP API BUILDER
+# PHP API BUILDER 
 
 A library designed to simplify the construction of APIs in PHP, ensuring clean, well-structured code, and providing out-of-the-box support for connecting a MySQL database as a resource.
 
@@ -27,7 +28,7 @@ For the proper functioning of the API, it is necessary to modify the composer.js
 
 ### composer.json
 
-To maintain order in our API development, we define a name for our project from which all our services will branch out. For this example, my project will be called ‘Services,’ and I will specify that it will be developed in the ‘services’ folder.
+To maintain order in our API development, we define a name for our project from which all our services will branch out. For this example, my project will be called 'Services,' and I will specify that it will be developed in the 'services' folder.
 
 ```json
 {
