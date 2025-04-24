@@ -6,6 +6,9 @@ docker compose up -d
 # Install dependencies
 docker exec pab-api composer install --verbose
 
+# Regenerate autoloader
+docker exec pab-api composer dump-autoload -o
+
 # Copy .env file
 cp example.env .env
 
