@@ -68,10 +68,10 @@ class ApiToolsTest extends TestCase
     debug('tag', "debug");
 
     ob_start();
-    response(SC_SUCCESS_OK, 'test');
+    success('test');
     $output = ob_get_clean();
 
-    $expected = '{"successful":true,"result":{"data":"test","debug":[{"tag":"debug"}]}}';
+    $expected = '{"successful":true,"result":{"data":"test","debug":{"tag":"debug"}}}';
     $this->assertEquals(
       json_decode($expected, true),
       json_decode($output, true)

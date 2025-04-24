@@ -13,4 +13,11 @@ class Demo
     $input = getInput();
     success('Hello ' . $input['name'] . '!');
   }
+
+  public function getDebug() 
+  {
+    debug('tag1', 'debug1');
+    debug('tag2', 'debug2');
+    success('test');
+  }
 }

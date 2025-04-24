@@ -7,7 +7,7 @@ class EntityTest extends TestCase
 {
   private $entityMock;
   private $sqlMock;
-
+  
   protected function setUp(): void
   {
     $this->sqlMock = $this->createMock(SqlBuilder::class);
@@ -16,10 +16,17 @@ class EntityTest extends TestCase
       ->onlyMethods(['query', 'mutation'])
       ->getMock();
 
-    $reflectionClass = new ReflectionClass($this->entityMock);
-    $sqlProperty = $reflectionClass->getParentClass()->getProperty('sql');
+    $reflectionClass = new ReflectionClass(Entity::class);
+    
+    // Establecer la propiedad sql
+    $sqlProperty = $reflectionClass->getProperty('sql');
     $sqlProperty->setAccessible(true);
     $sqlProperty->setValue($this->entityMock, $this->sqlMock);
+
+    // Establecer la propiedad isLocal como true
+    $isLocalProperty = $reflectionClass->getProperty('isLocal');
+    $isLocalProperty->setAccessible(true);
+    $isLocalProperty->setValue($this->entityMock, true);
   }
 
   public function testGetAll()

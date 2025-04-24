@@ -7,12 +7,12 @@ function response($code, $result)
   global $debugData;
 
   if (is_array($debugData) && count($debugData) > 0)
-    $result = array('data' => $result, 'debug' => $debugData);
+    $result = ['data' => $result, 'debug' => $debugData];
 
-  $json = array(
+  $json = [
     'successful' => $successful,
     'result' => $result
-  );
+  ];
 
   echo json_encode($json, http_response_code($code));
 }
