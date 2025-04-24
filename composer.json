@@ -21,7 +21,9 @@
   "autoload": {
     "psr-4": {
       "ApiBuilder\\": "src/",
-      "DemoApi\\": "demo/"
+      "ApiBuilder\\ORM\\": "src/orm/",
+      "DemoApi\\": "demo/",
+      "DemoApi\\Entities\\": "demo/entities/"
     },
     "files": [
       "src/helpers/constants.php",
