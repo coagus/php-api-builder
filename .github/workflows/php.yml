@@ -16,11 +16,8 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v4
 
-    - name: Build Docker image
-      run: docker build -t php-api-builder -f resources/docker/php/Dockerfile .
-
-    - name: Install dependencies
-      run: docker run --rm -v ${{ github.workspace }}:/var/www/html php-api-builder composer install
+    - name: Build Docker Environment
+      run: ./dev-up.sh
 
     - name: Run test suite
-      run: docker run --rm -v ${{ github.workspace }}:/var/www/html php-api-builder vendor/bin/phpunit tests
+      run: docker exec pab-api vendor/bin/phpunit tests
