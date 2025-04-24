@@ -46,4 +46,4 @@ jobs:
         composer dump-autoload
 
     - name: Run test suite
-      run: vendor/bin/phpunit tests --verbose
+      run: vendor/bin/phpunit tests
