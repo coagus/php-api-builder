@@ -1,11 +1,21 @@
+# Apache Configuration File (.htaccess)
+
+# Disable directory listing and enable all other options
 Options All -Indexes
+
+# Disable MultiViews to prevent Apache from trying to guess the correct page
 Options -MultiViews
 
+# Enable the Apache mod_rewrite engine
 RewriteEngine On
 
+# If the requested file doesn't exist physically
 RewriteCond %{REQUEST_FILENAME} !-f
+# Redirect all requests to index.php while preserving query strings
 RewriteRule ^ index.php [QSA,L]
 
+# Configure caching headers if mod_headers is available
 <IfModule mod_headers.c>
-Header set Cache-Control "private"
+    # Set Cache-Control header to private, preventing caching in public proxies
+    Header set Cache-Control "private"
 </IfModule>

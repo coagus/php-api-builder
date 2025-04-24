@@ -23,7 +23,7 @@ function debug($tag, $data)
   if (!is_array($debugData))
     $debugData = [];
 
-  array_push($debugData, array($tag => $data));
+  $debugData[$tag] = $data;
 }
 
 function getInput()

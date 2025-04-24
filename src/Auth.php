@@ -1,0 +1,44 @@
+<?php
+namespace ApiBuilder;
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
+class Auth
+{
+  public function getToken($user)
+  {
+    $time = time();
+    $payload = [
+      "iat" => $time,
+      "exp" => $time + 60 * $_ENV[EXP],
+      "data" => $user
+    ];
+
+    $token = '';
+
+    try {
+      $token = JWT::encode($payload, $_ENV[KEY], $_ENV[ALG]);
+    } catch (\Exception $e) {
+      error($e->getMessage(), SC_ERROR_UNAUTHORIZED);
+    }
+
+    return $token;
+  }
+
+  public function validToken()
+  {
+    if (isset($_ENV[SECURE]) && $_ENV[SECURE] === 'false')
+      return true;
+
+    $headers = apache_request_headers();
+    $token = isset($headers['Authorization']) ? str_replace('Bearer ', '', $headers['Authorization']) : '';
+
+    try {
+      JWT::decode($token, new Key($_ENV[KEY], $_ENV[ALG]));
+      return true;
+    } catch (\Exception $e) {
+      error("Authentication required: " . $e->getMessage(), SC_ERROR_UNAUTHORIZED);
+    }
+  }
+}

@@ -4,7 +4,7 @@ services:
   mysql:
     build:
       context: ./resources/docker/mysql
-    image: mysql-server
+    image: mysql-server:pab
     container_name: pab-db
     environment:
       MYSQL_DATABASE: apidb
@@ -17,7 +17,7 @@ services:
   php:
     build:
       context: ./resources/docker/php
-    image: php-server
+    image: php-server:pab
     container_name: pab-api
     ports:
       - "80:80"

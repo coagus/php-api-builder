@@ -36,8 +36,11 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
 
-    - name: check
-      run: tree && cat src/orm/APIDB.php
+    - name: Verify directory structure
+      run: |
+        ls -la
+        ls -la src/orm/
+        composer dump-autoload
 
     - name: Run test suite
-      run: vendor/bin/phpunit tests
+      run: vendor/bin/phpunit tests --verbose
