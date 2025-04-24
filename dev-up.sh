@@ -4,7 +4,7 @@
 docker compose up -d
 
 # Install dependencies
-docker exec -it pab-api composer install --verbose
+docker exec pab-api composer install --verbose
 
 # Copy .env file
 cp example.env .env
