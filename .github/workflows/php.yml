@@ -13,42 +13,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Set up PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
-
     - name: Check out code
       uses: actions/checkout@v4
 
-    - name: Update Composer lock file
-      run: composer update --no-install
-
-    - name: Validate composer.json and composer.lock
-      run: composer validate
-
-    - name: Cache Composer packages
-      id: composer-cache
-      uses: actions/cache@v3
-      with:
-        path: vendor
-        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-php-
+    - name: Build Docker image
+      run: docker build -t php-api-builder -f resources/docker/php/Dockerfile .
 
     - name: Install dependencies
-      run: composer install --prefer-dist --no-progress
-
-    - name: Verify directory structure and autoload
-      run: |
-        ls -la
-        composer dump-autoload -o
-        if [ ! -d "src/orm" ]; then
-          echo "Directory src/orm does not exist"
-          exit 1
-        fi
-        ls -la src/
-        ls -la src/orm/
+      run: docker run --rm -v ${{ github.workspace }}:/var/www/html php-api-builder composer install
 
     - name: Run test suite
-      run: vendor/bin/phpunit tests --debug
+      run: docker run --rm -v ${{ github.workspace }}:/var/www/html php-api-builder vendor/bin/phpunit tests
