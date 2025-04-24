@@ -12,12 +12,6 @@ docker exec pab-api composer dump-autoload -o
 # Copy .env file
 cp example.env .env
 
-# Detect if running in GitHub Actions
-if [ -n "$GITHUB_ACTIONS" ]; then
-    # En GitHub Actions, usa el nombre del servicio de MySQL
-    sed -i 's/DB_HOST=host.docker.internal/DB_HOST=pab-db/g' .env
-fi
-
 # Run the demo
 echo "Running the demo service..."
 curl http://localhost:80/api/v1/demo
