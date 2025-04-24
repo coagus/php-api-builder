@@ -12,6 +12,12 @@ docker exec pab-api composer dump-autoload -o
 # Copy .env file
 cp example.env .env
 
+# Detect if running in GitHub Actions
+if [ -n "$GITHUB_ACTIONS" ]; then
+    # En GitHub Actions, usa el nombre del servicio de MySQL
+    sed -i 's/DB_HOST=host.docker.internal/DB_HOST=pab-db/g' .env
+fi
+
 # Run the demo
 echo "Running the demo service..."
 curl http://localhost:80/api/v1/demo
@@ -34,11 +40,11 @@ while [ $attempt -le $max_attempts ]; do
     attempt=$((attempt + 1))
 done
 
-#if [ $attempt -gt $max_attempts ]; then
-#    echo "Error: Could not establish connection after $max_attempts attempts"
-#    exit 1
-#fi
+if [ $attempt -gt $max_attempts ]; then
+    echo "Error: Could not establish connection after $max_attempts attempts"
+    exit 1
+fi
 
 # Run the database
-#echo "Running role service..."
-#curl http://localhost:80/api/v1/role
+echo "Running role service..."
+curl http://localhost:80/api/v1/role

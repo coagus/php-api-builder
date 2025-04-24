@@ -19,22 +19,5 @@ jobs:
     - name: Build Docker Environment
       run: ./dev-up.sh
 
-    - name: Debug environment
-      run: |
-        echo "=== Directory structure ==="
-        docker exec pab-api ls -la /var/www/html
-        echo "\n=== ORM directory ==="
-        docker exec pab-api ls -la /var/www/html/src/orm
-        echo "\n=== Composer autoload files ==="
-        docker exec pab-api ls -la /var/www/html/vendor/composer
-        echo "\n=== PSR-4 Autoload content ==="
-        docker exec pab-api cat /var/www/html/vendor/composer/autoload_psr4.php
-        echo "\n=== Database.php content ==="
-        docker exec pab-api cat /var/www/html/src/orm/DataBase.php
-        echo "\n=== PHP include path ==="
-        docker exec pab-api php -r "echo get_include_path();"
-        echo "\n=== Composer autoload debug ==="
-        docker exec pab-api composer dump-autoload -o --verbose
-
     - name: Run test suite
       run: docker exec pab-api vendor/bin/phpunit tests
