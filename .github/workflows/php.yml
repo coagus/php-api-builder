@@ -39,11 +39,16 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
 
-    - name: Verify directory structure
+    - name: Verify directory structure and autoload
       run: |
         ls -la
+        composer dump-autoload -o
+        if [ ! -d "src/orm" ]; then
+          echo "Directory src/orm does not exist"
+          exit 1
+        fi
+        ls -la src/
         ls -la src/orm/
-        composer dump-autoload
 
     - name: Run test suite
-      run: vendor/bin/phpunit tests
+      run: vendor/bin/phpunit tests --debug
