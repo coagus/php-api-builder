@@ -1,11 +1,21 @@
 [![Latest Stable Version](https://poser.pugx.org/coagus/php-api-builder/v/stable)](https://packagist.org/packages/coagus/php-api-builder)
 [![Total Downloads](https://poser.pugx.org/coagus/php-api-builder/downloads)](https://packagist.org/packages/coagus/php-api-builder) 
 [![License](https://poser.pugx.org/coagus/php-api-builder/license)](https://packagist.org/packages/coagus/php-api-builder)
-[![PHP Unit Test](https://github.com/coagus/php-api-builder/workflows/PHP%20Composer/badge.svg)](https://github.com/coagus/php-api-builder/actions)
+[![PHP Unit Test](https://github.com/coagus/php-api-builder/workflows/PHP%20Unit%20Test/badge.svg)](https://github.com/coagus/php-api-builder/actions)
 
 # PHP API BUILDER 
 
-A library designed to simplify the construction of APIs in PHP, ensuring clean, well-structured code, and providing out-of-the-box support for connecting a MySQL database as a resource.
+PHP API Builder is a lightweight and powerful library that streamlines API development in PHP. It provides:
+
+- **Clean Architecture**: Enforces a well-structured and maintainable codebase
+- **ORM Integration**: Built-in MySQL database integration with a simple yet powerful ORM
+- **Authentication**: Out-of-the-box JWT authentication support
+- **RESTful Services**: Easy implementation of RESTful endpoints
+- **Error Handling**: Comprehensive error handling and debugging capabilities
+- **Zero Configuration**: Minimal setup required with sensible defaults
+- **PSR-4 Compliant**: Follows PHP-FIG standards for maximum compatibility
+
+Perfect for building robust and scalable APIs while maintaining clean and organized code.
 
 ## Installation
 
