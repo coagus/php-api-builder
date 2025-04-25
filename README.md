@@ -1,7 +1,7 @@
 [![Latest Stable Version](https://poser.pugx.org/coagus/php-api-builder/v/stable)](https://packagist.org/packages/coagus/php-api-builder)
 [![Total Downloads](https://poser.pugx.org/coagus/php-api-builder/downloads)](https://packagist.org/packages/coagus/php-api-builder) 
 [![License](https://poser.pugx.org/coagus/php-api-builder/license)](https://packagist.org/packages/coagus/php-api-builder)
-[![PHP Composer](https://github.com/coagus/php-api-builder/workflows/PHP%20Composer/badge.svg)](https://github.com/coagus/php-api-builder/actions)
+[![PHP Unit Test](https://github.com/coagus/php-api-builder/workflows/PHP%20Composer/badge.svg)](https://github.com/coagus/php-api-builder/actions)
 
 # PHP API BUILDER 
 
@@ -33,7 +33,7 @@ To maintain order in our API development, we define a name for our project from 
 ```json
 {
   "require": {
-    "coagus/php-api-builder": "v0.6.0"
+    "coagus/php-api-builder": "v1.0.0"
   }
   "autoload": {
     "psr-4": {
