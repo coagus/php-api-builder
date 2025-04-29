@@ -16,15 +16,36 @@ function toPascalCase($kebabCase)
 
 function toSnakeCasePlural($pacalOrCamel)
 {
-  $poc = toSnakeCase($pacalOrCamel);
-  return substr($poc, -1) === 'y' ? substr($poc, 0, -1) . 'ies' : $poc . 's';
+    $poc = toSnakeCase($pacalOrCamel);
+    
+    // Handle words ending in 'y'
+    if (substr($poc, -1) === 'y') {
+        return substr($poc, 0, -1) . 'ies';
+    }
+    // Handle words ending in 'ss'
+    else if (substr($poc, -2) === 'ss') {
+        return $poc . 'es';
+    }
+    // Regular cases
+    return $poc . 's';
 }
 
 function toSingular($word)
 {
-  return substr($word, -3) == 'ies'
-    ? substr($word, 0, -3) . 'y'
-    : (substr($word, -1) == 's' ? substr($word, 0, -1) : $word);
+    // Handle words ending in 'ies' (e.g., 'categories' -> 'category')
+    if (substr($word, -3) == 'ies') {
+        return substr($word, 0, -3) . 'y';
+    }
+    // Handle words ending in 'sses' or 'ses' (e.g., 'businesses' -> 'business')
+    else if (substr($word, -4) == 'sses' || substr($word, -3) == 'ses') {
+        return substr($word, 0, -2);
+    }
+    // Handle regular plural words ending in 's'
+    else if (substr($word, -1) == 's' && substr($word, -2) != 'ss') {
+        return substr($word, 0, -1);
+    }
+    
+    return $word;
 }
 
 function logError($errno, $errstr, $errfile = '', $errline = '')
@@ -37,7 +58,8 @@ function logError($errno, $errstr, $errfile = '', $errline = '')
   $log->error("$error $errstr");
 }
 
-function inEnv($key) {
+function inEnv($key)
+{
   if (!isset($_ENV[$key])) {
     logError(SC_ERROR_NOT_FOUND, "$key not configured in .env file");
     return false;
@@ -46,7 +68,8 @@ function inEnv($key) {
   return true;
 }
 
-function loadEnv() {
+function loadEnv()
+{
   if (!file_exists($_SERVER['DOCUMENT_ROOT'] . '/.env')) {
     logError(SC_ERROR_NOT_FOUND, 'Not exists .env file.');
     error('Environment Error');
