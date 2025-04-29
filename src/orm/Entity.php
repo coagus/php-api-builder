@@ -6,7 +6,7 @@ use ApiBuilder\Auth;
 class Entity extends DataBase
 {
   private $sql;
-  public $jwt;
+  protected $jwt;
   private $isLocal;
 
   public function __CONSTRUCT($isLocal = false)

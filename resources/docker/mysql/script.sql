@@ -3,7 +3,9 @@ CREATE TABLE
     `id` int NOT NULL AUTO_INCREMENT,
     `role` varchar(30) NOT NULL,
     PRIMARY KEY (`id`),
-    UNIQUE KEY (`role`)
+    UNIQUE KEY (`role`),
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   );
 
 INSERT INTO
@@ -24,7 +26,9 @@ CREATE TABLE
     PRIMARY KEY (`id`),
     KEY `fk_users_roles_idx` (`role_id`),
     CONSTRAINT `fk_users_roles` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`),
-    UNIQUE (`username`)
+    UNIQUE (`username`),
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   );
 
 COMMIT;
