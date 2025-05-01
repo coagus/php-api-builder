@@ -60,7 +60,7 @@ class API
     if (!isset($requestUri[URI_RESOURCE]) || $requestUri[URI_RESOURCE] == '')
       error('Do not have resource (host/api/version/[resource!!!].', SC_ERROR_BAD_REQUEST);
 
-    return toPascalCase($requestUri[URI_RESOURCE]);
+    return toPascalCase(toSingular($requestUri[URI_RESOURCE]));
   }
 
   private function getClassResource($resource)

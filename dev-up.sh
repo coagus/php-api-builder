@@ -14,14 +14,14 @@ cp example.env .env
 
 # Run the demo
 echo "Running the demo service..."
-curl http://localhost:80/api/v1/demo
+curl http://localhost:80/api/v1/demos
 echo ""
 
 # Wait for database service to be available
 max_attempts=30
 attempt=1
 while [ $attempt -le $max_attempts ]; do
-    response=$(curl -s http://localhost:80/api/v1/role)
+    response=$(curl -s http://localhost:80/api/v1/roles)
     successful=$(echo $response | grep -o '"successful":[^,}]*' | grep -o '[^:]*$' | tr -d '[:space:]"')
     
     if [ "$successful" = "true" ]; then
@@ -41,4 +41,4 @@ fi
 
 # Run the database
 echo "Running role service..."
-curl http://localhost:80/api/v1/role
+curl http://localhost:80/api/v1/roles

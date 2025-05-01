@@ -12,7 +12,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost/api/v1/demo",
+					"raw": "http://localhost/api/v1/demos",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -20,7 +20,7 @@
 					"path": [
 						"api",
 						"v1",
-						"demo"
+						"demos"
 					]
 				}
 			},
@@ -32,7 +32,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost/api/v1/user",
+					"raw": "http://localhost/api/v1/users",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -40,7 +40,7 @@
 					"path": [
 						"api",
 						"v1",
-						"user"
+						"users"
 					]
 				}
 			},
@@ -61,7 +61,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://localhost/api/v1/user/firstUser",
+					"raw": "http://localhost/api/v1/users/firstUser",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -69,29 +69,8 @@
 					"path": [
 						"api",
 						"v1",
-						"user",
+						"users",
 						"firstUser"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Delete User",
-			"request": {
-				"method": "DELETE",
-				"header": [],
-				"url": {
-					"raw": "http://localhost/api/v1/user/1",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"path": [
-						"api",
-						"v1",
-						"user",
-						"1"
 					]
 				}
 			},
@@ -112,7 +91,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://localhost/api/v1/user/login",
+					"raw": "http://localhost/api/v1/users/login",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -120,7 +99,7 @@
 					"path": [
 						"api",
 						"v1",
-						"user",
+						"users",
 						"login"
 					]
 				}
@@ -142,7 +121,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://localhost/api/v1/user/activateUser",
+					"raw": "http://localhost/api/v1/users/activateUser",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -150,8 +129,29 @@
 					"path": [
 						"api",
 						"v1",
-						"user",
+						"users",
 						"activateUser"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete User",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost/api/v1/users/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"path": [
+						"api",
+						"v1",
+						"users",
+						"1"
 					]
 				}
 			},
@@ -163,7 +163,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost/api/v1/role",
+					"raw": "http://localhost/api/v1/roles",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -171,7 +171,7 @@
 					"path": [
 						"api",
 						"v1",
-						"role"
+						"roles"
 					]
 				}
 			},
@@ -183,7 +183,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost/api/v1/demo/debug",
+					"raw": "http://localhost/api/v1/demos/debug",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -191,7 +191,7 @@
 					"path": [
 						"api",
 						"v1",
-						"demo",
+						"demos",
 						"debug"
 					]
 				}

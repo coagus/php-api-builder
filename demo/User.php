@@ -2,6 +2,7 @@
 namespace DemoApi;
 
 use ApiBuilder\ORM\APIDB;
+use ApiBuilder\Auth;
 
 class User extends APIDB
 {
@@ -65,7 +66,8 @@ class User extends APIDB
     unset($usrFound[0]->password);
     unset($usrFound[0]->active);
 
-    $token = $usr->jwt->getToken($usrFound[0]);
+    $auth = new Auth();
+    $token = $auth->getToken($usrFound[0]);
 
     success(['user' => $usrFound[0], 'token' => $token]);
   }
