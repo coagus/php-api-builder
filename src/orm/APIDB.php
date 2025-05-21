@@ -42,7 +42,7 @@ class APIDB
 
     foreach ($input as $key => $value) {
       if (!array_key_exists($key, get_object_vars($entity)))
-        error("key '$key' not exists");
+        error("key '$key' not exists as a field in the entity.");
 
       $entity->$key = $value;
     }
@@ -77,8 +77,31 @@ class APIDB
 
   public function put()
   {
-    if (!$this->getEmptyEntity()->getById($this->priId))
+    if (empty($this->priId))
+      error('Primary ID is required.');
+
+    $entity = $this->getEmptyEntity();
+    $input = getInput();
+
+    if (!$entity->getById($this->priId))
       error('Not exists');
+
+    if (count($input) != count(get_object_vars($entity)) - 1)
+      error('Invalid input, the input must be the same as the entity.');    
+
+    $this->save($this->priId);
+  }
+
+  public function patch()
+  {
+    if (empty($this->priId))
+      error('Primary ID is required.');
+
+    $entity = $this->getEmptyEntity();
+    
+    if (!$entity->getById($this->priId))
+      error('Not exists');
+
     $this->save($this->priId);
   }
 
