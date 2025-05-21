@@ -1,5 +1,7 @@
 <?php 
 # URI definition
+const URI_API = 1;
+const URI_VERSION = 2;
 const URI_RESOURCE = 3;
 const URI_OPERATION_PRIMARY_ID = 4;
 const URI_OPERATION = 5;

@@ -45,7 +45,7 @@ class DataBase
       $count = intval($this->pdo->query($qryCount)->fetch(PDO::FETCH_OBJ)->cnt);
 
       $page = $_REQUEST['page'] ?? '0';
-      $rowsPerPage = $_REQUEST['rowsPerPage'] ?? '10';
+      $rowsPerPage = $_REQUEST['rows-per-page'] ?? '10';
       $rowsPerPage = $rowsPerPage === '-1' ? $count : $rowsPerPage;
       $start = (int) $page * (int) $rowsPerPage;
 

@@ -127,42 +127,6 @@ class APITest extends TestCase
         $this->assertEquals('postOperationCompoundMethod', $operation);
     }
 
-    public function testGetResource()
-    {
-        $requestUri = ['host', 'api', 'v1', 'resource'];
-
-        $reflection = new ReflectionClass(API::class);
-        $method = $reflection->getMethod('getResource');
-        $method->setAccessible(true);
-
-        $operation = $method->invokeArgs($this->api, [$requestUri]);
-        $this->assertEquals('Resource', $operation);
-    }
-
-    public function testGetResourceCompound()
-    {
-        $requestUri = ['host', 'api', 'v1', 'resource-compound-test'];
-
-        $reflection = new ReflectionClass(API::class);
-        $method = $reflection->getMethod('getResource');
-        $method->setAccessible(true);
-
-        $operation = $method->invokeArgs($this->api, [$requestUri]);
-        $this->assertEquals('ResourceCompoundTest', $operation);
-    }
-
-    public function testGetClassResource()
-    {
-        eval ('namespace Tests; class TestResource {}');
-
-        $reflection = new ReflectionClass(API::class);
-        $method = $reflection->getMethod('getClassResource');
-        $method->setAccessible(true);
-
-        $class = $method->invokeArgs($this->api, ['TestResource']);
-        $this->assertEquals("Tests\\TestResource", $class);
-    }
-
     public function testGetInstanceResourceService()
     {
         $_SERVER['REQUEST_METHOD'] = 'POST';
@@ -242,7 +206,7 @@ class APITest extends TestCase
         $this->api->run();
         $output = ob_get_clean();
 
-        $expected = '{"successful": false,"result": "Do not have resource (host/api/version/[resource!!!]."}';
+        $expected = '{"successful": false,"result": "Do not have resource: host/api/version/[resource!!!]."}';
 
         $this->assertEquals(
             json_decode($expected, true),
@@ -253,13 +217,12 @@ class APITest extends TestCase
     public function testErrorClassResourceNotExists()
     {
         $_SERVER['REQUEST_METHOD'] = 'POST';
-        $_SERVER['REQUEST_URI'] = 'host/api/v1/class-Test';
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/class-test';
 
         ob_start();
         $this->api->run();
         $output = ob_get_clean();
-
-        $expected = '{"successful": false,"result": "Resource or Entity \'class_tests\' not exists with \'POST\' method."}';
+        $expected = '{"successful": false,"result": "Class Tests\\\\ClassTest or Tests\\\\Entities\\\\ClassTest is not defined."}';
 
         $this->assertEquals(
             json_decode($expected, true),

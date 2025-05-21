@@ -1,4 +1,10 @@
 <?php
+
+function isPlural($word)
+{
+  return preg_match('/[^s]s$/', $word) || preg_match('/ies$/', $word);
+}
+
 function toSnakeCase($pacalOrCamel)
 {
   return ltrim(strtolower(preg_replace("/[A-Z]/", "_" . "$0", $pacalOrCamel)), '_');
@@ -6,7 +12,7 @@ function toSnakeCase($pacalOrCamel)
 
 function toPascalCase($kebabCase)
 {
-  $data = array_filter(explode('-', strtolower($kebabCase)));
+  $data = array_filter(explode('-', $kebabCase));
   $pascalCase = '';
   foreach ($data as $word)
     $pascalCase .= ucwords($word);
@@ -16,36 +22,36 @@ function toPascalCase($kebabCase)
 
 function toSnakeCasePlural($pacalOrCamel)
 {
-    $poc = toSnakeCase($pacalOrCamel);
-    
-    // Handle words ending in 'y'
-    if (substr($poc, -1) === 'y') {
-        return substr($poc, 0, -1) . 'ies';
-    }
-    // Handle words ending in 'ss'
-    else if (substr($poc, -2) === 'ss') {
-        return $poc . 'es';
-    }
-    // Regular cases
-    return $poc . 's';
+  $poc = toSnakeCase($pacalOrCamel);
+
+  // Handle words ending in 'y'
+  if (substr($poc, -1) === 'y') {
+    return substr($poc, 0, -1) . 'ies';
+  }
+  // Handle words ending in 'ss'
+  else if (substr($poc, -2) === 'ss') {
+    return $poc . 'es';
+  }
+  // Regular cases
+  return $poc . 's';
 }
 
 function toSingular($word)
 {
-    // Handle words ending in 'ies' (e.g., 'categories' -> 'category')
-    if (substr($word, -3) == 'ies') {
-        return substr($word, 0, -3) . 'y';
-    }
-    // Handle words ending in 'sses' or 'ses' (e.g., 'businesses' -> 'business')
-    else if (substr($word, -4) == 'sses' || substr($word, -3) == 'ses') {
-        return substr($word, 0, -2);
-    }
-    // Handle regular plural words ending in 's'
-    else if (substr($word, -1) == 's' && substr($word, -2) != 'ss') {
-        return substr($word, 0, -1);
-    }
-    
-    return $word;
+  // Handle words ending in 'ies' (e.g., 'categories' -> 'category')
+  if (substr($word, -3) == 'ies') {
+    return substr($word, 0, -3) . 'y';
+  }
+  // Handle words ending in 'sses' or 'ses' (e.g., 'businesses' -> 'business')
+  else if (substr($word, -4) == 'sses' || substr($word, -3) == 'ses') {
+    return substr($word, 0, -2);
+  }
+  // Handle regular plural words ending in 's'
+  else if (substr($word, -1) == 's' && substr($word, -2) != 'ss') {
+    return substr($word, 0, -1);
+  }
+
+  return $word;
 }
 
 function logError($errno, $errstr, $errfile = '', $errline = '')
