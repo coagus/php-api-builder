@@ -161,6 +161,23 @@ class APITest extends TestCase
         );
     }
 
+    // Validate Error Request
+
+    public function testErrorRequestUppercase()
+    {
+        $_SERVER['REQUEST_URI'] = 'HOST/API/V1/TEST';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Request should not contain uppercase letters."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
     public function testErrorRequestNotExists()
     {
         $_SERVER['REQUEST_URI'] = '';
@@ -170,6 +187,216 @@ class APITest extends TestCase
         $output = ob_get_clean();
 
         $expected = '{"successful": false,"result": "Request not exists."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorRequestInvalidCharacters()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/test<>';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Request contains invalid characters (<, >, |, .., ./ and spaces)."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorRequestEndWithSlash()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/test/';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Request URI should not end with a slash (/)."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorRequestNotHaveAPI()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/error-request-not-have-api';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Do not have API: host/[api!!!]."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorRequestNotHaveVersion()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Do not have version: host/api/[version!!!]."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorRequestBadVersion()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1.1/test';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Version must be in format: host/api/v{number} (e.g. v1)."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorRequestNotHaveResource()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Do not have resource: host/api/version/[resource!!!]."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorRequestResourceNotPlural()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/table';
+
+        eval ('namespace Tests\\Entities; class Table { }');
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Resource \'table\' must be plural."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorClassResourceNotExists()
+    {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/class-test';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+        $expected = '{"successful": false,"result": "Class Tests\\\\ClassTest or Tests\\\\Entities\\\\ClassTest is not defined."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorOperationIsRequiredWhenSecondaryIdIsProvided()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/resource/1//1';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Operation is required when secondary ID is provided: host/api/version/resource/primaryId/[operation???]/secondaryId."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorPrimaryIdIsRequiredWhenSecondaryIdIsProvided()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/resource//operation/1';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Primary ID is required when secondary ID is provided: host/api/version/resource/[primaryId???]/operation/secondaryId."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorSecondaryIdIsNotNumeric()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/resource/1/operation/not-numeric';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Secondary ID must be a number: host/api/version/resource/primaryId/operation/[secondaryId!!!]."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorOperationIsRequiredWhenPrimaryIdIsProvided()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/resource//operation';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Primary ID is required when operation is provided: host/api/version/resource/[primaryId???]/operation."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorPrimaryIdIsNotNumeric()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/resource/not-numeric/operation';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Primary ID must be a number: host/api/version/resource/[primaryId!!!]/operation."}';
 
         $this->assertEquals(
             json_decode($expected, true),
@@ -188,41 +415,6 @@ class APITest extends TestCase
         $output = ob_get_clean();
 
         $expected = '{"successful": false,"result": "Operation \'postOperation\' not exists."}';
-
-        $this->assertEquals(
-            json_decode($expected, true),
-            json_decode($output, true)
-        );
-    }
-
-    public function testErrorResourceNotExists()
-    {
-        $_SERVER['REQUEST_METHOD'] = 'POST';
-        $_SERVER['REQUEST_URI'] = 'host/api/v1';
-
-        eval ('namespace Tests; class TestErrorResource { }');
-
-        ob_start();
-        $this->api->run();
-        $output = ob_get_clean();
-
-        $expected = '{"successful": false,"result": "Do not have resource: host/api/version/[resource!!!]."}';
-
-        $this->assertEquals(
-            json_decode($expected, true),
-            json_decode($output, true)
-        );
-    }
-
-    public function testErrorClassResourceNotExists()
-    {
-        $_SERVER['REQUEST_METHOD'] = 'POST';
-        $_SERVER['REQUEST_URI'] = 'host/api/v1/class-test';
-
-        ob_start();
-        $this->api->run();
-        $output = ob_get_clean();
-        $expected = '{"successful": false,"result": "Class Tests\\\\ClassTest or Tests\\\\Entities\\\\ClassTest is not defined."}';
 
         $this->assertEquals(
             json_decode($expected, true),

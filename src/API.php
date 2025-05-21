@@ -48,7 +48,7 @@ class API
       error('Request URI should not end with a slash (/).', SC_ERROR_BAD_REQUEST);
 
     if (!isset($requestUri[URI_API]) || $requestUri[URI_API] != 'api')
-      error('Do not have API: host/[api!!!]', SC_ERROR_BAD_REQUEST);
+      error('Do not have API: host/[api!!!].', SC_ERROR_BAD_REQUEST);
 
     if (!isset($requestUri[URI_VERSION]) || $requestUri[URI_VERSION] == '')
       error('Do not have version: host/api/[version!!!].', SC_ERROR_BAD_REQUEST);
@@ -67,10 +67,10 @@ class API
       error("Resource '$resource' must be plural.", SC_ERROR_BAD_REQUEST);
 
     if (!class_exists($resourceClass) && !class_exists($entityClass))
-      error("Class $resourceClass or $entityClass is not defined.");
+      error("Class $resourceClass or $entityClass is not defined.", SC_ERROR_BAD_REQUEST);
 
     if (!class_exists(APIDB))
-      error("APIDB Class is not defined.");
+      error("APIDB Class is not defined.", SC_ERROR_BAD_REQUEST);
 
     if (isset($requestUri[URI_SECONDARY_ID]) && !isset($requestUri[URI_OPERATION]))
       error('Operation is required when secondary ID is provided: host/api/version/resource/primaryId/[operation???]/secondaryId.', SC_ERROR_BAD_REQUEST);
