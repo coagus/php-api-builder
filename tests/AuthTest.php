@@ -33,51 +33,47 @@ class AuthTest extends TestCase
     $this->assertNotEmpty($token);
   }
 
-  public function testValidTokenWithValidToken()
+  public function testValidateSessionWithValidToken()
   {
-    // Crear un token válido primero
     $token = $this->auth->getToken('test');
 
-    // Establecer headers con token válido
     self::$headers = ['Authorization' => 'Bearer ' . $token];
 
-    $this->assertTrue($this->auth->validToken());
+    $this->assertTrue($this->auth->validateSession());
   }
 
-  public function testValidTokenWithInvalidToken()
+  public function testValidateSessionWithInvalidToken()
   {
-    // Establecer headers con token inválido
     self::$headers = ['Authorization' => 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid'];
 
     ob_start();
     try {
-      $this->auth->validToken();
+      $this->auth->validateSession();
       $this->fail('Se esperaba una excepción');
     } catch (\Exception $e) {
-      $this->assertTrue(true); // La excepción fue lanzada como se esperaba
+      $this->assertTrue(true);
     }
     ob_end_clean();
   }
 
-  public function testValidTokenWithNoToken()
+  public function testValidateSessionWithNoToken()
   {
-    // Headers vacíos
     self::$headers = [];
 
     ob_start();
     try {
-      $this->auth->validToken();
+      $this->auth->validateSession();
       $this->fail('Se esperaba una excepción');
     } catch (\Exception $e) {
-      $this->assertTrue(true); // La excepción fue lanzada como se esperaba
+      $this->assertTrue(true);
     }
     ob_end_clean();
   }
 
-  public function testValidTokenWhenSecurityDisabled()
+  public function testValidateSessionWhenSecurityDisabled()
   {
     $_ENV[SECURE] = 'false';
-    $this->assertTrue($this->auth->validToken());
+    $this->assertTrue($this->auth->validateSession());
     unset($_ENV[SECURE]);
   }
 

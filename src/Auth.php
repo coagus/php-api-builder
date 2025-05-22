@@ -26,7 +26,7 @@ class Auth
     return $token;
   }
 
-  public function validToken()
+  public function validateSession()
   {
     if (isset($_ENV[SECURE]) && $_ENV[SECURE] === 'false')
       return true;

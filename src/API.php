@@ -128,7 +128,7 @@ class API
       (isset($requestUri[URI_OPERATION_PRIMARY_ID]) && !is_numeric($requestUri[URI_OPERATION_PRIMARY_ID])
         ? $requestUri[URI_OPERATION_PRIMARY_ID] : '');
 
-    return strtolower($_SERVER['REQUEST_METHOD']) . toPascalCase($operation);
+    return strtolower($_SERVER['REQUEST_METHOD']) . toPascalCase(toSingular($operation));
   }
 
   public function run()

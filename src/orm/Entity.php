@@ -21,31 +21,31 @@ class Entity extends DataBase
 
   public function getAll()
   {
-    if ($this->isLocal || $this->jwt->validToken())
+    if ($this->isLocal || $this->jwt->validateSession())
       return $this->query($this->sql->getAll($this), false, 'id DESC');
   }
 
   public function getById($id)
   {
-    if ($this->isLocal || $this->jwt->validToken())
+    if ($this->isLocal || $this->jwt->validateSession())
       return $this->query($this->sql->getById($this, $id));
   }
 
   public function getWhere()
   {
-    if ($this->isLocal || $this->jwt->validToken())
+    if ($this->isLocal || $this->jwt->validateSession())
       return $this->query($this->sql->getWhere($this), false);
   }
 
   public function save()
   {
-    if ($this->isLocal || $this->jwt->validToken())
+    if ($this->isLocal || $this->jwt->validateSession())
       return $this->mutation($this->sql->getPersistence($this));
   }
 
   public function delete($id)
   {
-    if ($this->isLocal || $this->jwt->validToken())
+    if ($this->isLocal || $this->jwt->validateSession())
       return $this->mutation($this->sql->getDelete($id));
   }
 }
