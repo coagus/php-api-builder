@@ -81,6 +81,17 @@ class API
     if (isset($requestUri[URI_SECONDARY_ID]) && !is_numeric($requestUri[URI_SECONDARY_ID]))
       error('Secondary ID must be a number: host/api/version/resource/primaryId/operation/[secondaryId!!!].', SC_ERROR_BAD_REQUEST);
 
+    if (isset($requestUri[URI_SECONDARY_ID])) {
+      $secondaryResource = $requestUri[URI_OPERATION];
+      $entityClass = "$this->project\\Entities\\" . toPascalCase(toSingular($secondaryResource));
+
+      if (class_exists($entityClass) && !isPlural($secondaryResource))
+        error("Resource '$secondaryResource' must be plural.", SC_ERROR_BAD_REQUEST);
+
+      if (!class_exists($entityClass))
+        error("Must be entity class '$entityClass' if secondary Id is provided.", SC_ERROR_BAD_REQUEST);
+    }
+
     if (isset($requestUri[URI_OPERATION]) && !isset($requestUri[URI_OPERATION_PRIMARY_ID]))
       error('Primary ID is required when operation is provided: host/api/version/resource/[primaryId???]/operation.', SC_ERROR_BAD_REQUEST);
 

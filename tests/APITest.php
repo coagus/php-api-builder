@@ -372,6 +372,40 @@ class APITest extends TestCase
         );
     }
 
+    public function testErrorSecondaryResourceNotPlural()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/tables/1/other-table/1';
+
+        eval ('namespace Tests\\Entities; class OtherTable { }');
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Resource \'other-table\' must be plural."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
+    public function testErrorSecondaryResourceNotExists()
+    {
+        $_SERVER['REQUEST_URI'] = 'host/api/v1/tables/1/not-exists/1';
+
+        ob_start();
+        $this->api->run();
+        $output = ob_get_clean();
+
+        $expected = '{"successful": false,"result": "Must be entity class \'Tests\\\\Entities\\\\NotExist\' if secondary Id is provided."}';
+
+        $this->assertEquals(
+            json_decode($expected, true),
+            json_decode($output, true)
+        );
+    }
+
     public function testErrorOperationIsRequiredWhenPrimaryIdIsProvided()
     {
         $_SERVER['REQUEST_URI'] = 'host/api/v1/resource//operation';
