@@ -1,11 +1,22 @@
 <?php
 namespace DemoApi;
 
+use ApiBuilder\PublicResource;
+use ApiBuilder\Auth;
+
 class Demo
 {
   public function get()
   {
     success('Hello World!');
+  }
+
+  #[PublicResource]
+  public function getToken()
+  {
+    $auth = new Auth();
+    $token = $auth->getToken('test');
+    success(['token' => $token]);
   }
 
   public function postHello()

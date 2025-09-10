@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copy .env file
+cp example.env .env
+
 # Start services
 docker compose up -d
 
@@ -9,12 +12,9 @@ docker exec pab-api composer install --verbose
 # Regenerate autoloader
 docker exec pab-api composer dump-autoload -o
 
-# Copy .env file
-cp example.env .env
-
 # Run the demo
 echo "Running the demo service..."
-curl http://localhost:80/api/v1/demos
+curl http://localhost:${PHP_PORT:-80}/api/v1/demos
 echo ""
 
 # Wait for database service to be available
@@ -41,4 +41,4 @@ fi
 
 # Run the database
 echo "Running role service..."
-curl http://localhost:80/api/v1/roles
+curl http://localhost:${PHP_PORT:-80}/api/v1/roles

@@ -13,7 +13,35 @@ class API
   private function setCors()
   {
     header('Content-Type: application/json');
-    header('Access-Control-Allow-Origin: *');
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+    // Si no hay origin, probablemente es una app móvil
+    if (empty($origin)) {
+      return;
+    }
+
+    // Si existe la clase Cors, usarla para obtener los origins permitidos desde una DB por ejemplo
+    $CorsClass = "$this->project\\Cors";
+    if (class_exists($CorsClass)) {
+      $Cors = new $CorsClass();
+      $allowedOrigins = $Cors->getAllowedOrigins();
+      
+      if (in_array($origin, $allowedOrigins)) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+      } else {
+        error('Origin not allowed', SC_ERROR_FORBIDDEN);
+      }
+    } else {
+      // Si no existe la clase Cors, usar el valor de la variable de entorno CORS_ALLOWED_ORIGINS
+      $allowedOriginsString = $_ENV['CORS_ALLOWED_ORIGINS'] ?? 'http://localhost:3000';
+      $allowedOrigins = array_filter(array_map('trim', explode(',', $allowedOriginsString)));
+      
+      if (in_array($origin, $allowedOrigins)) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+      } else {
+        error('Origin not allowed', SC_ERROR_FORBIDDEN);
+      }
+    }
 
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
       header('Access-Control-Allow-Methods: POST, GET, DELETE, PUT, PATCH, OPTIONS');
@@ -131,11 +159,40 @@ class API
     return strtolower($_SERVER['REQUEST_METHOD']) . toPascalCase(toSingular($operation));
   }
 
+  private function authorizeOperation($instanceResourceService, $operation)
+  {
+    $className = $instanceResourceService::class;
+
+    $reflectionClass = new \ReflectionClass($className);
+    $attributes = $reflectionClass->getAttributes(PublicResource::class);
+    if (!empty($attributes))
+      return true;
+
+    $reflectionMethod = \ReflectionMethod::createFromMethodName($className . '::' . $operation);
+    $attributes = $reflectionMethod->getAttributes(PublicResource::class);
+    if (!empty($attributes))
+      return true;
+
+    $apiKeyClass = "$this->project\\APIKey";
+    if (class_exists($apiKeyClass)) {
+      $apiKey = new $apiKeyClass();
+      if ($apiKey->validate())
+        return true;
+    } else {
+      $auth = new Auth();
+      if ($auth->validateSession())
+        return true;
+    }
+
+    error("Operation is not authorized.", SC_ERROR_UNAUTHORIZED);
+  }
+
   public function run()
   {
     try {
       loadEnv();
       $this->setCors();
+
       $requestUri = $this->getRequestUri();
       $this->validateRequest($requestUri);
 
@@ -144,6 +201,8 @@ class API
 
       if (!is_callable([$instanceResourceService, $operation]))
         error("Operation '$operation' not exists.", SC_ERROR_BAD_REQUEST);
+
+      $this->authorizeOperation($instanceResourceService, $operation);
 
       call_user_func([$instanceResourceService, $operation]);
     } catch (\Exception $e) {

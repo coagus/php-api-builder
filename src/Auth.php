@@ -28,9 +28,6 @@ class Auth
 
   public function validateSession()
   {
-    if (isset($_ENV[SECURE]) && $_ENV[SECURE] === 'false')
-      return true;
-
     $headers = apache_request_headers();
     $token = isset($headers['Authorization']) ? str_replace('Bearer ', '', $headers['Authorization']) : '';
 
