@@ -47,9 +47,3 @@ fi
 # Run the database
 echo "Running role service..."
 curl http://localhost:${PHP_PORT:-80}/api/v1/roles
-
-
-
-SELECT Year(fecha_envio), Month(fecha_envio), count(1) 
-FROM `Factura`
-group by Year(fecha_envio), Month(fecha_envio);
