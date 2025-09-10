@@ -12,8 +12,12 @@ docker exec pab-api composer install --verbose
 # Regenerate autoloader
 docker exec pab-api composer dump-autoload -o
 
+# Containers
+docker ps
+
 # Run the demo
 echo "Running the demo service..."
+echo "curl http://localhost:${PHP_PORT:-80}/api/v1/demos"
 curl http://localhost:${PHP_PORT:-80}/api/v1/demos
 echo ""
 
@@ -21,7 +25,8 @@ echo ""
 max_attempts=30
 attempt=1
 while [ $attempt -le $max_attempts ]; do
-    response=$(curl -s http://localhost:80/api/v1/roles)
+    echo "curl -s http://localhost:${PHP_PORT:-80}/api/v1/roles"
+    response=$(curl -s http://localhost:${PHP_PORT:-80}/api/v1/roles)
     successful=$(echo $response | grep -o '"successful":[^,}]*' | grep -o '[^:]*$' | tr -d '[:space:]"')
     
     if [ "$successful" = "true" ]; then
@@ -42,3 +47,9 @@ fi
 # Run the database
 echo "Running role service..."
 curl http://localhost:${PHP_PORT:-80}/api/v1/roles
+
+
+
+SELECT Year(fecha_envio), Month(fecha_envio), count(1) 
+FROM `Factura`
+group by Year(fecha_envio), Month(fecha_envio);
