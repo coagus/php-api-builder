@@ -147,7 +147,17 @@ class APITest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $_SERVER['REQUEST_URI'] = 'host/api/v1/test-run/operation';
 
-        eval ('namespace Tests; class TestRun { public function postOperation() { success("OK"); } }');
+        eval ('
+        namespace Tests; 
+        
+        use ApiBuilder\PublicResource;
+
+        #[PublicResource]
+        class TestRun {  
+            public function postOperation() { 
+                success("OK"); 
+            } 
+        }');
 
         ob_start();
         $this->api->run();

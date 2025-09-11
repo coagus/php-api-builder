@@ -22,11 +22,6 @@ class EntityTest extends TestCase
     $sqlProperty = $reflectionClass->getProperty('sql');
     $sqlProperty->setAccessible(true);
     $sqlProperty->setValue($this->entityMock, $this->sqlMock);
-
-    // Establecer la propiedad isLocal como true
-    $isLocalProperty = $reflectionClass->getProperty('isLocal');
-    $isLocalProperty->setAccessible(true);
-    $isLocalProperty->setValue($this->entityMock, true);
   }
 
   public function testGetAll()

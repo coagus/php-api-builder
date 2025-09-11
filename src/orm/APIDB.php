@@ -18,7 +18,7 @@ class APIDB
     $this->db = $db ?? new DataBase();
   }
 
-  public function getEmptyEntity($isLocal = false)
+  public function getEmptyEntity()
   {
     $dbEntity = toSnakeCasePlural($this->entity);
     if (!$this->db->existsEntity($dbEntity))
@@ -28,12 +28,12 @@ class APIDB
     if (!class_exists($class))
       error("Entity '$this->entity' Class is not defined.");
 
-    return new $class($isLocal);
+    return new $class();
   }
 
-  public function getFilledEntity($isLocal = false)
+  public function getFilledEntity()
   {
-    $entity = $this->getEmptyEntity($isLocal);
+    $entity = $this->getEmptyEntity();
 
     $input = getInput();
 

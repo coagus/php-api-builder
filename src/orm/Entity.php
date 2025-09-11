@@ -6,7 +6,7 @@ class Entity extends DataBase
 {
   private $sql;
 
-  public function __CONSTRUCT($isLocal = false)
+  public function __CONSTRUCT()
   {
     parent::__construct();
     $entityClass = array_filter(explode('\\', get_class($this)));
