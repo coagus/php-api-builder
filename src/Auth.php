@@ -29,7 +29,7 @@ class Auth
   public function validateSession()
   {
     $headers = apache_request_headers();
-    $token = isset($headers['Authorization']) ? str_replace('Bearer ', '', $headers['Authorization']) : '';
+    $token = str_replace('Bearer ', '', $headers['Authorization'] ?? $headers['authorization'] ?? '');
 
     try {
       JWT::decode($token, new Key($_ENV[KEY], $_ENV[ALG]));
