@@ -6,6 +6,7 @@ use ApiBuilder\Auth;
 
 class Demo
 {
+  #[PublicResource]
   public function get()
   {
     success('Hello World!');
