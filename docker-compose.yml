@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   mysql:
     build:
       context: ./resources/docker/mysql
-    image: mysql-server:pab
-    container_name: pab-db
+    image: mysql-server:${DOCKER_PROJECT:-api}
+    container_name: db-${DOCKER_PROJECT:-mysql}
     environment:
       MYSQL_DATABASE: ${DB_NAME:-apidb}
       MYSQL_USER: ${DB_USERNAME:-admin}
@@ -19,8 +17,8 @@ services:
   php:
     build:
       context: ./resources/docker/php
-    image: php-server:pab
-    container_name: pab-api
+    image: php-server:${DOCKER_PROJECT:-api}
+    container_name: api-${DOCKER_PROJECT:-php}
     ports:
       - "${PHP_PORT:-80}:80"
     volumes:
