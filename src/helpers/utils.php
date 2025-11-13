@@ -5,6 +5,11 @@ function isPlural($word)
   return preg_match('/[^s]s$/', $word) || preg_match('/ies$/', $word);
 }
 
+function toLowerCamelCase($snakeCase)
+{
+  return lcfirst(str_replace('_', '', ucwords($snakeCase, '_')));
+}
+
 function toSnakeCase($pacalOrCamel)
 {
   return ltrim(strtolower(preg_replace("/[A-Z]/", "_" . "$0", $pacalOrCamel)), '_');

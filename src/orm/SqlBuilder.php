@@ -22,7 +22,7 @@ class SqlBuilder
   public function fillAliasFields($obj)
   {
     $fieldsArray = array_map(
-      fn($key) => toSnakeCase($key) === $key ? $key : toSnakeCase($key) . " AS $key",
+      fn($key) => toLowerCamelCase($key) === $key ? $key : $key . " AS " . toLowerCamelCase($key),
       array_keys($this->getObj($obj))
     );
 

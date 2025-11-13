@@ -35,21 +35,41 @@ class DataBase
     }
   }
 
+  public function getWhereSearch($query, $search)
+  {
+    $whereSearch = 'WHERE ';
+    $firstRow = $this->pdo->query('SELECT * FROM (' . $query . ') query LIMIT 1')->fetch(PDO::FETCH_OBJ);
+    $fields = array_keys(get_object_vars($firstRow));
+
+    foreach ($fields as $field) {
+      $whereSearch .= "$field LIKE '%$search%' OR ";
+    }
+
+    return $whereSearch . '1=1';
+  }
+
   public function query($query, $single = true, $order = '')
   {
     try {
       if ($single)
         return $this->pdo->query($query)->fetch(PDO::FETCH_OBJ);
 
-      $qryCount = "SELECT COUNT(1) as cnt FROM ($query) query";
+      $search = $_REQUEST['search'] ?? '';
+      $whereSearch = '';
+
+      if (!empty($search)) {
+        $whereSearch = $this->getWhereSearch($query, $search);
+      }
+
+      $qryCount = "SELECT COUNT(1) as cnt FROM ($query) query $whereSearch";
       $count = intval($this->pdo->query($qryCount)->fetch(PDO::FETCH_OBJ)->cnt);
 
       $page = $_REQUEST['page'] ?? '0';
-      $rowsPerPage = $_REQUEST['rows-per-page'] ?? '10';
+      $rowsPerPage = $_REQUEST['rowsPerPage'] ?? '10';
       $rowsPerPage = $rowsPerPage === '-1' ? $count : $rowsPerPage;
       $start = (int) $page * (int) $rowsPerPage;
 
-      $query = "SELECT * FROM ($query) query" . ($order ? " ORDER BY $order" : "") . " LIMIT $start, $rowsPerPage";
+      $query = "SELECT * FROM ($query) query $whereSearch " . ($order ? " ORDER BY $order" : "") . " LIMIT $start, $rowsPerPage";
       $data = $this->pdo->query($query)->fetchAll(PDO::FETCH_OBJ);
 
       return [

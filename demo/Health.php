@@ -1,5 +1,5 @@
 <?php
-namespace ApiBuilder;
+namespace DemoApi;
 
 use ApiBuilder\ORM\DataBase;
 use ApiBuilder\PublicResource;

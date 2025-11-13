@@ -56,7 +56,11 @@ class API
   {
     $uri = $_SERVER['REQUEST_URI'];
 
-    if (preg_match('/[A-Z]/', $uri))
+    $reqUri = strpos($uri, "?")
+      ? array_filter(explode('?', $uri))[0]
+      : $uri;
+
+    if (preg_match('/[A-Z]/', $reqUri))
       error('Request should not contain uppercase letters.', SC_ERROR_BAD_REQUEST);
 
     if (empty($requestUri))
