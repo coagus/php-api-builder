@@ -29,7 +29,7 @@ class SqlBuilderTest extends TestCase
   public function testFillAliasFields()
   {
     $this->assertEquals(
-      'id, name, other_field AS otherField',
+      'id, name, otherField',
       $this->sql->fillAliasFields($this->obj)
     );
   }
@@ -37,7 +37,7 @@ class SqlBuilderTest extends TestCase
   public function testGetAll()
   {
     $this->assertEquals(
-      'SELECT id, name, other_field AS otherField FROM Entity',
+      'SELECT id, name, otherField FROM Entity',
       $this->sql->getAll($this->obj)
     );
   }
@@ -45,7 +45,7 @@ class SqlBuilderTest extends TestCase
   public function testGetById()
   {
     $this->assertEquals(
-      'SELECT id, name, other_field AS otherField FROM Entity WHERE id = 1',
+      'SELECT id, name, otherField FROM Entity WHERE id = 1',
       $this->sql->getById($this->obj, '1')
     );
   }
@@ -64,7 +64,7 @@ class SqlBuilderTest extends TestCase
     $this->obj->name = 'Agustin';
     $this->obj->otherField = 'something';
     $this->assertEquals(
-      "SELECT id, name, other_field AS otherField FROM Entity WHERE name = 'Agustin' AND other_field = 'something'",
+      "SELECT id, name, otherField FROM Entity WHERE name = 'Agustin' AND other_field = 'something'",
       $this->sql->getWhere($this->obj)
     );
   }
