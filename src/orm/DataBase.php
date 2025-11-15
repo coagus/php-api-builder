@@ -37,15 +37,15 @@ class DataBase
 
   public function getWhereSearch($query, $search)
   {
-    $whereSearch = 'WHERE ';
     $firstRow = $this->pdo->query('SELECT * FROM (' . $query . ') query LIMIT 1')->fetch(PDO::FETCH_OBJ);
     $fields = array_keys(get_object_vars($firstRow));
 
-    foreach ($fields as $field) {
-      $whereSearch .= "$field LIKE '%$search%' OR ";
-    }
+    $whereParts = array_map(
+      fn($field) => "$field LIKE '%$search%'",
+      $fields
+    );
 
-    return $whereSearch . '1=1';
+    return 'WHERE ' . implode(' OR ', $whereParts);
   }
 
   public function query($query, $single = true, $order = '')
