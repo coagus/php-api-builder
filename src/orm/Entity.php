@@ -14,19 +14,52 @@ class Entity extends DataBase
     $this->sql = new SqlBuilder($entity, ['sql']);
   }
 
+  protected function getBooleanFields()
+  {
+    return [];
+  }
+
+  private function convertObjectBooleanFields($object, $booleanFields)
+  {
+    foreach ($booleanFields as $field) {
+      if (property_exists($object, $field)) {
+        $object->$field = $object->$field === null ? false : (bool) $object->$field;
+      }
+    }
+  }
+
+  private function convertBooleanFields($data)
+  {
+    $booleanFields = $this->getBooleanFields();
+
+    if (empty($booleanFields)) {
+      return $data;
+    }
+
+    if (is_object($data)) {
+      $this->convertObjectBooleanFields($data, $booleanFields);
+    } else {
+      foreach ($data['data'] as $item) {
+        $this->convertObjectBooleanFields($item, $booleanFields);
+      }
+    }
+
+    return $data;
+  }
+
   public function getAll()
   {
-    return $this->query($this->sql->getAll($this), false, 'id DESC');
+    return $this->convertBooleanFields($this->query($this->sql->getAll($this), false, 'id DESC'));
   }
 
   public function getById($id)
   {
-    return $this->query($this->sql->getById($this, $id));
+    return $this->convertBooleanFields($this->query($this->sql->getById($this, $id)));
   }
 
   public function getWhere()
   {
-    return $this->query($this->sql->getWhere($this), false);
+    return $this->convertBooleanFields($this->query($this->sql->getWhere($this), false));
   }
 
   public function save()
