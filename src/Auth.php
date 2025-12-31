@@ -28,7 +28,7 @@ class Auth
 
   public function validateSession()
   {
-    $headers = apache_request_headers();
+    $headers = \apache_request_headers();
     $token = str_replace('Bearer ', '', $headers['Authorization'] ?? $headers['authorization'] ?? '');
 
     try {

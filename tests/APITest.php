@@ -5,6 +5,7 @@ use ApiBuilder\API;
 class APITest extends TestCase
 {
     private $api;
+    private static $testHeaders = [];
 
     public static function setUpBeforeClass(): void
     {
@@ -15,6 +16,16 @@ class APITest extends TestCase
                 \$dotenv->load();
             }
         ");
+        
+        // Mock global de apache_request_headers para tests
+        if (!function_exists('apache_request_headers')) {
+            eval ("
+                function apache_request_headers() {
+                    global \$testHeaders;
+                    return \$testHeaders ?? [];
+                }
+            ");
+        }
     }
 
     protected function setUp(): void
@@ -146,6 +157,18 @@ class APITest extends TestCase
     {
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $_SERVER['REQUEST_URI'] = 'host/api/v1/test-run/operation';
+        
+        // Configurar variables de entorno para autenticación
+        $_ENV['JWT_KEY'] = $_ENV['JWT_KEY'] ?? 'test-key';
+        $_ENV['JWT_ALG'] = $_ENV['JWT_ALG'] ?? 'HS256';
+        $_ENV['JWT_EXP_MINS'] = $_ENV['JWT_EXP_MINS'] ?? '15';
+        
+        // Generar un token válido para el test
+        $auth = new \ApiBuilder\Auth();
+        $token = $auth->getToken('test-user');
+        
+        // Configurar los headers globales para el mock
+        $GLOBALS['testHeaders'] = ['Authorization' => 'Bearer ' . $token];
 
         eval ('
         namespace Tests; 
@@ -162,6 +185,9 @@ class APITest extends TestCase
         ob_start();
         $this->api->run();
         $output = ob_get_clean();
+        
+        // Limpiar headers después del test
+        $GLOBALS['testHeaders'] = [];
 
         $expected = '{"successful": true,"result": "OK"}';
 
@@ -326,7 +352,7 @@ class APITest extends TestCase
         ob_start();
         $this->api->run();
         $output = ob_get_clean();
-        $expected = '{"successful": false,"result": "Class Tests\\\\ClassTest or Tests\\\\Entities\\\\ClassTest is not defined."}';
+        $expected = '{"successful": false,"result": "Resource Class not found for resource: class-test"}';
 
         $this->assertEquals(
             json_decode($expected, true),

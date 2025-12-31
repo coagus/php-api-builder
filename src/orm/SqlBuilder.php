@@ -63,7 +63,7 @@ class SqlBuilder
   {
     $filteredObj = array_filter($this->getObj($obj, ['id']), fn($value) => $value !== null);
     $fields = implode(',', array_map(fn($key) => toSnakeCase($key), array_keys($filteredObj)));
-    $values = implode(',', array_map(fn($value) => "'$value'", $filteredObj));
+    $values = implode(',', array_map(fn($value) => \is_bool($value) ? ($value ? '1' : '0') : "'$value'", $filteredObj));
 
     return "INSERT INTO $this->entity($fields) VALUES($values)";
   }
@@ -72,7 +72,7 @@ class SqlBuilder
   {
     $filteredObj = array_filter($this->getObj($obj, ['id']), fn($value) => $value !== null);
     $update = implode(', ', array_map(
-      fn($key, $value) => toSnakeCase($key) . "='$value'",
+      fn($key, $value) => toSnakeCase($key) .'='. (\is_bool($value) ? ($value ? '1' : '0') : "'$value'"),
       array_keys($filteredObj),
       $filteredObj
     ));

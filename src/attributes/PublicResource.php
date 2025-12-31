@@ -1,5 +1,5 @@
 <?php
-namespace ApiBuilder;
+namespace ApiBuilder\Attributes;
 
 use Attribute;
 

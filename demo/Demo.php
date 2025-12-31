@@ -1,7 +1,7 @@
 <?php
 namespace DemoApi;
 
-use ApiBuilder\PublicResource;
+use ApiBuilder\Attributes\PublicResource;
 use ApiBuilder\Auth;
 
 class Demo

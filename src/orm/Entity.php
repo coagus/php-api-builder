@@ -2,6 +2,9 @@
 namespace ApiBuilder\ORM;
 
 use ApiBuilder\ORM\SqlBuilder;
+use ApiBuilder\Attributes\Table;
+use ReflectionClass;
+
 class Entity extends DataBase
 {
   private $sql;
@@ -9,8 +12,14 @@ class Entity extends DataBase
   public function __CONSTRUCT()
   {
     parent::__construct();
-    $entityClass = array_filter(explode('\\', get_class($this)));
-    $entity = toSnakeCasePlural($entityClass[count($entityClass) - 1]);
+    $reflection = new ReflectionClass(\get_class($this));
+    $tableClass = Table::class;
+    $attributes = $reflection->getAttributes($tableClass);
+    $table = $attributes ? $attributes[0]->getArguments()[0] : null;
+
+    $entityClass = array_filter(explode('\\', \get_class($this)));
+
+    $entity = $table ?? toSnakeCasePlural($entityClass[count($entityClass) - 1]);
     $this->sql = new SqlBuilder($entity, ['sql']);
   }
 

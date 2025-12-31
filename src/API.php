@@ -1,6 +1,8 @@
 <?php
 namespace ApiBuilder;
 
+use ApiBuilder\Attributes\PublicResource;
+
 class API
 {
   private $project;
@@ -98,8 +100,8 @@ class API
     if (!isPlural($resource) && class_exists($entityClass))
       error("Resource '$resource' must be plural.", SC_ERROR_BAD_REQUEST);
 
-    if (!class_exists($resourceClass) && !class_exists($entityClass))
-      error("Class $resourceClass or $entityClass is not defined.", SC_ERROR_BAD_REQUEST);
+    // if (!class_exists($resourceClass) && !class_exists($entityClass))
+    //   error("Class $resourceClass or $entityClass is not defined.", SC_ERROR_BAD_REQUEST);
 
     if (!class_exists(APIDB))
       error("APIDB Class is not defined.", SC_ERROR_BAD_REQUEST);
@@ -141,9 +143,8 @@ class API
 
   private function getInstanceResourceService($requestUri)
   {
-    $resource = toPascalCase(toSingular($requestUri[URI_RESOURCE]));
-    $resourceClass = "$this->project\\$resource";
-    $class = class_exists($resourceClass) ? $resourceClass : APIDB;
+    $resource = $requestUri[URI_RESOURCE];
+    $class = getClass($this->project, $resource );
 
     $prmId = isset($requestUri[URI_OPERATION_PRIMARY_ID]) && is_numeric($requestUri[URI_OPERATION_PRIMARY_ID])
       ? $requestUri[URI_OPERATION_PRIMARY_ID] : '';

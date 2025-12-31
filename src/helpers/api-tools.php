@@ -43,7 +43,9 @@ function error($msg, $code = SC_ERROR_NOT_FOUND)
 
 function errorHandler($errno, $errstr, $errfile, $errline)
 {
-  logError($errno, $errstr, $errfile, $errline);
+  if (function_exists('logError')) {
+    logError($errno, $errstr, $errfile, $errline);
+  }
   throw new \Exception($errstr, $errno < 400 ? SC_ERROR_NOT_FOUND : $errno);
 }
 
@@ -51,7 +53,9 @@ function shutdownHandler()
 {
   $error = error_get_last();
   if ($error !== null && $error['type'] === E_ERROR) {
-    logError(SC_ERROR_NOT_FOUND, $error['message'], $error['file'], $error['line']);
+    if (function_exists('logError')) {
+      logError(SC_ERROR_NOT_FOUND, $error['message'], $error['file'], $error['line']);
+    }
     response(SC_ERROR_NOT_FOUND, $error['message']);
   }
 }

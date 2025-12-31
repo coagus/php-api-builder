@@ -5,14 +5,14 @@ class APIDB
 {
   private $project;
   private $db;
-  protected $entity;
+  protected $resource;
   protected $priId;
   protected $secId;
 
-  public function __CONSTRUCT($project = '', $entity = '', $priId = '', $secId = '', $db = null)
+  public function __CONSTRUCT($project = '', $resource = '', $priId = '', $secId = '', $db = null)
   {
     $this->project = $project;
-    $this->entity = toSingular($entity);
+    $this->resource = $resource;
     $this->priId = $priId;
     $this->secId = $secId;
     $this->db = $db ?? new DataBase();
@@ -20,14 +20,11 @@ class APIDB
 
   public function getEmptyEntity()
   {
-    $dbEntity = toSnakeCasePlural($this->entity);
+    $dbEntity = str_replace('-', '_', $this->resource);
     if (!$this->db->existsEntity($dbEntity))
       error("Resource or Entity '$dbEntity' not exists with '" . $_SERVER['REQUEST_METHOD'] . "' method.");
 
-    $class = "$this->project\\Entities\\$this->entity";
-    if (!class_exists($class))
-      error("Entity '$this->entity' Class is not defined.");
-
+    $class = getEntityClass($this->project, $this->resource);
     return new $class();
   }
 
@@ -41,7 +38,7 @@ class APIDB
       error("input is empty.");
 
     foreach ($input as $key => $value) {
-      if (!array_key_exists($key, get_object_vars($entity)))
+      if (!\array_key_exists($key, get_object_vars($entity)))
         error("key '$key' not exists as a field in the entity.");
 
       $entity->$key = $value;
@@ -86,7 +83,7 @@ class APIDB
     if (!$entity->getById($this->priId))
       error('Not exists');
 
-    if (count($input) != count(get_object_vars($entity)) - 1)
+    if (\count($input) != \count(get_object_vars($entity)) - 1)
       error('Invalid input, the input must be the same as the entity.');    
 
     $this->save($this->priId);

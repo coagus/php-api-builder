@@ -35,18 +35,19 @@ class DataBase
     }
   }
 
-  private function getFields($query) {
+  private function getFields($query)
+  {
     $firstRow = $this->pdo->query('SELECT * FROM (' . $query . ') query LIMIT 1')->fetch(PDO::FETCH_OBJ);
-    return array_keys(get_object_vars($firstRow));
-  }  
+    return $firstRow ? array_keys(get_object_vars($firstRow)) : [];
+  }
 
   private function getWhere($search, $fields, $searchFields)
   {
-    $where = $searchFields ? implode(' AND ', array_map(fn($field) => "$field = '$_REQUEST[$field]'", $searchFields)) : '';    
-    
+    $where = $searchFields ? implode(' AND ', array_map(fn($field) => "$field = '$_REQUEST[$field]'", $searchFields)) : '';
+
     if (!empty($search)) {
       $where .= ($where ? ' AND ' : '') . '( ' . implode(' OR ', array_map(fn($field) => "$field LIKE '%$search%'", $fields)) . ' )';
-    }    
+    }
 
     return "WHERE $where";
   }
@@ -57,21 +58,23 @@ class DataBase
       if ($single)
         return $this->pdo->query($query)->fetch(PDO::FETCH_OBJ);
 
+      $where = '';
       $search = $_REQUEST['search'] ?? '';
       $fields = $this->getFields($query);
-      $searchFields = array_filter(array_keys($_REQUEST), fn($field) => in_array($field, $fields) && !empty($_REQUEST[$field]));
 
-      $where = '';
+      if (!empty($fields)) {
+        $searchFields = array_filter(array_keys($_REQUEST), fn($field) => \in_array($field, $fields) && !empty($_REQUEST[$field]));
 
-      if ($search || $searchFields) {
-        $where = $this->getWhere( $search, $fields, $searchFields);
+        if ($search || $searchFields) {
+          $where = $this->getWhere($search, $fields, $searchFields);
+        }
       }
 
       $qryCount = "SELECT COUNT(1) as cnt FROM ($query) query $where";
       $count = \intval($this->pdo->query($qryCount)->fetch(PDO::FETCH_OBJ)->cnt);
 
-      $page = $_REQUEST['page'] ?? '0';
-      $rowsPerPage = $_REQUEST['rowsPerPage'] ?? '10';
+      $page = $_REQUEST['page'] ?? 0;
+      $rowsPerPage = $_REQUEST['rowsPerPage'] ?? 10;
       $rowsPerPage = $rowsPerPage === '-1' ? $count : $rowsPerPage;
       $start = (int) $page * (int) $rowsPerPage;
 

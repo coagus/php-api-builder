@@ -12,4 +12,9 @@ class User extends Entity
   public $email;
   public $active;
   public $roleId;
+
+  public function booleanFields()
+  {
+    return ['active'];
+  }
 }
