@@ -92,6 +92,12 @@ function loadEnv()
   $dotenv->load();
 }
 
+function getProjectPath()
+{
+  $dir = explode('vendor',__DIR__)[0];
+  return is_dir($dir) ? $dir : $_SERVER['DOCUMENT_ROOT'].'/';
+}
+
 function toFilter($string)
 {
   $singular = toSingular($string);
@@ -123,7 +129,7 @@ function getEntityClass($project, $resource)
   $classToFind = '*' . implode('*', $rscPascalWords) . '*.php';
 
   // Si no se encontró, busco en el directorio de entidades
-  $entitiesPath = $_SERVER['DOCUMENT_ROOT'] . '/services/entities/';
+  $entitiesPath = getProjectPath() . 'services/entities/';
 
   if (is_dir($entitiesPath)) {
     $files = glob($entitiesPath . $classToFind);
@@ -176,7 +182,7 @@ function getClass($project, $resource)
   $classToFind = '*' . implode('*', $rscPascalWords) . '*.php';
 
   // Buscar las clases en el directorio de servicios
-  $files = glob($_SERVER['DOCUMENT_ROOT'] . "/services/" . $classToFind);
+  $files = glob(getProjectPath() . "services/" . $classToFind);
 
   // Obtengo los nombres que deben el nombre de su respectiva clase
   $classes = array_map(fn($file) => pathinfo($file, PATHINFO_FILENAME), $files);
@@ -202,7 +208,7 @@ function getClass($project, $resource)
   }
 
   // Si no se encontró, busco en el directorio de entidades
-  $entitiesPath = $_SERVER['DOCUMENT_ROOT'] . '/services/entities/';
+  $entitiesPath = getProjectPath() . 'services/entities/';
 
   if (is_dir($entitiesPath)) {
     $files = glob($entitiesPath . $classToFind);
