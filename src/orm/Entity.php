@@ -41,11 +41,11 @@ class Entity extends DataBase
   {
     $booleanFields = $this->getBooleanFields();
 
-    if (empty($booleanFields)) {
+    if (!$data || empty($data) || empty($booleanFields)) {
       return $data;
     }
 
-    if (is_object($data)) {
+    if (\is_object($data)) {
       $this->convertObjectBooleanFields($data, $booleanFields);
     } else {
       foreach ($data['data'] as $item) {
