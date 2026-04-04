@@ -32,6 +32,7 @@
             "role": "Developer"
         }
     ],
+    "bin": ["bin/api"],
     "minimum-stability": "stable",
     "prefer-stable": true,
     "config": {
