@@ -170,7 +170,7 @@ class UserService extends APIDB
             return;
         }
 
-        $this->success(['token' => Auth::generateToken($user)]);
+        $this->success(['token' => Auth::generateAccessToken($user->toArray())]);
     }
 }
 ```
@@ -201,7 +201,7 @@ $users = User::query()
 $users = User::query()->active()->recent(7)->get();
 
 // Level 5: Raw SQL (always parameterized)
-$results = Connection::query(
+$results = Connection::getInstance()->query(
     'SELECT u.*, COUNT(o.id) as total FROM users u LEFT JOIN orders o ON o.user_id = u.id GROUP BY u.id HAVING total > ?',
     [5]
 );
