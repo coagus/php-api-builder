@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Coagus\PhpApiBuilder\ORM;
 
+use Coagus\PhpApiBuilder\Attributes\BelongsTo;
+use Coagus\PhpApiBuilder\Attributes\BelongsToMany;
+use Coagus\PhpApiBuilder\Attributes\HasMany;
 use Coagus\PhpApiBuilder\Attributes\PrimaryKey;
 use Coagus\PhpApiBuilder\Attributes\SoftDelete;
 use Coagus\PhpApiBuilder\Attributes\Table;
@@ -17,6 +20,7 @@ use RuntimeException;
 abstract class Entity
 {
     private static array $metadataCache = [];
+    private array $loadedRelations = [];
 
     public static function getTableName(): string
     {
@@ -162,12 +166,122 @@ abstract class Entity
             }
 
             $name = $prop->getName();
-            if ($prop->isInitialized($this)) {
-                $result[Utils::camelToSnake($name)] = $prop->getValue($this);
+            if (!$prop->isInitialized($this)) {
+                continue;
             }
+
+            $value = $prop->getValue($this);
+
+            // Include loaded relations as nested arrays
+            if (!empty($prop->getAttributes(BelongsTo::class))
+                || !empty($prop->getAttributes(HasMany::class))
+                || !empty($prop->getAttributes(BelongsToMany::class))) {
+                if (in_array($name, $this->loadedRelations, true)) {
+                    if ($value instanceof Entity) {
+                        $result[Utils::camelToSnake($name)] = $value->toArray();
+                    } elseif (is_array($value)) {
+                        $result[Utils::camelToSnake($name)] = array_map(fn(Entity $e) => $e->toArray(), $value);
+                    }
+                }
+                continue;
+            }
+
+            $result[Utils::camelToSnake($name)] = $value;
         }
 
         return $result;
+    }
+
+    public function loadRelation(string $relationName): void
+    {
+        $ref = new ReflectionClass($this);
+        if (!$ref->hasProperty($relationName)) {
+            return;
+        }
+
+        $prop = $ref->getProperty($relationName);
+
+        $belongsToAttrs = $prop->getAttributes(BelongsTo::class);
+        if (!empty($belongsToAttrs)) {
+            $attr = $belongsToAttrs[0]->newInstance();
+            $relatedClass = $attr->entity;
+            $fk = $attr->foreignKey ?? Utils::camelToSnake($relationName) . '_id';
+            $fkCamel = Utils::snakeToCamel($fk);
+            if (isset($this->{$fkCamel})) {
+                $this->{$relationName} = $relatedClass::find($this->{$fkCamel});
+            }
+            $this->loadedRelations[] = $relationName;
+            return;
+        }
+
+        $hasManyAttrs = $prop->getAttributes(HasMany::class);
+        if (!empty($hasManyAttrs)) {
+            $attr = $hasManyAttrs[0]->newInstance();
+            $relatedClass = $attr->entity;
+            $fk = $attr->foreignKey ?? Utils::camelToSnake((new ReflectionClass(static::class))->getShortName()) . '_id';
+            $fkCamel = Utils::snakeToCamel($fk);
+            $this->{$relationName} = $relatedClass::query()->where($fkCamel, $this->{static::getPrimaryKeyField()})->get();
+            $this->loadedRelations[] = $relationName;
+            return;
+        }
+
+        $belongsToManyAttrs = $prop->getAttributes(BelongsToMany::class);
+        if (!empty($belongsToManyAttrs)) {
+            $attr = $belongsToManyAttrs[0]->newInstance();
+            $relatedClass = $attr->entity;
+            $pivotTable = $attr->pivotTable;
+            $foreignPivotKey = $attr->foreignPivotKey;
+            $relatedPivotKey = $attr->relatedPivotKey;
+            $relatedTable = $relatedClass::getTableName();
+            $pkValue = $this->{static::getPrimaryKeyField()};
+
+            $sql = "SELECT r.* FROM {$relatedTable} r INNER JOIN {$pivotTable} p ON p.{$relatedPivotKey} = r.id WHERE p.{$foreignPivotKey} = ?";
+            $rows = Connection::getInstance()->query($sql, [$pkValue]);
+            $this->{$relationName} = array_map(fn(array $row) => $relatedClass::hydrate($row), $rows);
+            $this->loadedRelations[] = $relationName;
+        }
+    }
+
+    public function setRelation(string $name, mixed $value): void
+    {
+        $this->{$name} = $value;
+        $this->loadedRelations[] = $name;
+    }
+
+    public static function getRelationMeta(string $propertyName): ?array
+    {
+        $ref = new ReflectionClass(static::class);
+        if (!$ref->hasProperty($propertyName)) {
+            return null;
+        }
+
+        $prop = $ref->getProperty($propertyName);
+
+        $belongsTo = $prop->getAttributes(BelongsTo::class);
+        if (!empty($belongsTo)) {
+            $attr = $belongsTo[0]->newInstance();
+            return ['type' => 'belongsTo', 'entity' => $attr->entity, 'foreignKey' => $attr->foreignKey];
+        }
+
+        $hasMany = $prop->getAttributes(HasMany::class);
+        if (!empty($hasMany)) {
+            $attr = $hasMany[0]->newInstance();
+            return ['type' => 'hasMany', 'entity' => $attr->entity, 'foreignKey' => $attr->foreignKey];
+        }
+
+        $belongsToMany = $prop->getAttributes(BelongsToMany::class);
+        if (!empty($belongsToMany)) {
+            $attr = $belongsToMany[0]->newInstance();
+            return [
+                'type' => 'belongsToMany',
+                'entity' => $attr->entity,
+                'pivotTable' => $attr->pivotTable,
+                'foreignPivotKey' => $attr->foreignPivotKey,
+                'relatedPivotKey' => $attr->relatedPivotKey,
+            ];
+        }
+
+        return null;
     }
 
     protected function beforeCreate(): void {}
@@ -254,6 +368,12 @@ abstract class Entity
                 continue;
             }
             if (!$prop->isInitialized($this)) {
+                continue;
+            }
+            // Skip relation properties
+            if (!empty($prop->getAttributes(BelongsTo::class))
+                || !empty($prop->getAttributes(HasMany::class))
+                || !empty($prop->getAttributes(BelongsToMany::class))) {
                 continue;
             }
 

@@ -21,3 +21,16 @@ CREATE TABLE IF NOT EXISTS orders (
     status TEXT DEFAULT 'pending',
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_tags (
+    user_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (user_id, tag_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (tag_id) REFERENCES tags(id)
+);

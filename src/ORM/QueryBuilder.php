@@ -139,8 +139,13 @@ class QueryBuilder
         $rows = Connection::getInstance()->query($sql, $this->bindings);
 
         $entityClass = $this->entityClass;
+        $entities = array_map(fn(array $row) => $entityClass::hydrate($row), $rows);
 
-        return array_map(fn(array $row) => $entityClass::hydrate($row), $rows);
+        if (!empty($this->withs)) {
+            $this->eagerLoad($entities);
+        }
+
+        return $entities;
     }
 
     public function first(): ?object
@@ -263,5 +268,156 @@ class QueryBuilder
         $entityClass = $this->entityClass;
 
         return $entityClass::getTableName();
+    }
+
+    private function eagerLoad(array $entities): void
+    {
+        if (empty($entities)) {
+            return;
+        }
+
+        $entityClass = $this->entityClass;
+
+        foreach ($this->withs as $relationPath) {
+            $parts = explode('.', $relationPath);
+            $relationName = $parts[0];
+
+            $meta = $entityClass::getRelationMeta($relationName);
+            if ($meta === null) {
+                continue;
+            }
+
+            match ($meta['type']) {
+                'belongsTo' => $this->eagerLoadBelongsTo($entities, $relationName, $meta),
+                'hasMany' => $this->eagerLoadHasMany($entities, $relationName, $meta),
+                'belongsToMany' => $this->eagerLoadBelongsToMany($entities, $relationName, $meta),
+            };
+
+            // Handle nested eager loading
+            if (count($parts) > 1) {
+                $nestedRelation = implode('.', array_slice($parts, 1));
+                $relatedEntities = [];
+                foreach ($entities as $entity) {
+                    $related = $entity->{$relationName};
+                    if (is_array($related)) {
+                        $relatedEntities = array_merge($relatedEntities, $related);
+                    } elseif ($related !== null) {
+                        $relatedEntities[] = $related;
+                    }
+                }
+                if (!empty($relatedEntities)) {
+                    $relatedClass = $meta['entity'];
+                    $nestedQb = new self($relatedClass);
+                    $nestedQb->withs = [$nestedRelation];
+                    $nestedQb->eagerLoad($relatedEntities);
+                }
+            }
+        }
+    }
+
+    private function eagerLoadBelongsTo(array $entities, string $relationName, array $meta): void
+    {
+        $relatedClass = $meta['entity'];
+        $fk = $meta['foreignKey'] ?? Utils::camelToSnake($relationName) . '_id';
+        $fkCamel = Utils::snakeToCamel($fk);
+
+        $ids = array_unique(array_filter(array_map(
+            fn($e) => $e->{$fkCamel} ?? null,
+            $entities
+        )));
+
+        if (empty($ids)) {
+            return;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $relatedTable = $relatedClass::getTableName();
+        $relatedPk = $relatedClass::getPrimaryKeyField();
+        $relatedPkCol = Utils::camelToSnake($relatedPk);
+
+        $rows = Connection::getInstance()->query(
+            "SELECT * FROM {$relatedTable} WHERE {$relatedPkCol} IN ({$placeholders})",
+            array_values($ids)
+        );
+
+        $indexed = [];
+        foreach ($rows as $row) {
+            $related = $relatedClass::hydrate($row);
+            $indexed[$related->{$relatedPk}] = $related;
+        }
+
+        foreach ($entities as $entity) {
+            $fkValue = $entity->{$fkCamel} ?? null;
+            $entity->setRelation($relationName, $indexed[$fkValue] ?? null);
+        }
+    }
+
+    private function eagerLoadHasMany(array $entities, string $relationName, array $meta): void
+    {
+        $relatedClass = $meta['entity'];
+        $entityClass = $this->entityClass;
+        $pk = $entityClass::getPrimaryKeyField();
+        $fk = $meta['foreignKey'] ?? Utils::camelToSnake((new \ReflectionClass($entityClass))->getShortName()) . '_id';
+
+        $ids = array_map(fn($e) => $e->{$pk}, $entities);
+
+        if (empty($ids)) {
+            return;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $relatedTable = $relatedClass::getTableName();
+
+        $rows = Connection::getInstance()->query(
+            "SELECT * FROM {$relatedTable} WHERE {$fk} IN ({$placeholders})",
+            $ids
+        );
+
+        $grouped = [];
+        $fkCamel = Utils::snakeToCamel($fk);
+        foreach ($rows as $row) {
+            $related = $relatedClass::hydrate($row);
+            $parentId = $related->{$fkCamel};
+            $grouped[$parentId][] = $related;
+        }
+
+        foreach ($entities as $entity) {
+            $entity->setRelation($relationName, $grouped[$entity->{$pk}] ?? []);
+        }
+    }
+
+    private function eagerLoadBelongsToMany(array $entities, string $relationName, array $meta): void
+    {
+        $relatedClass = $meta['entity'];
+        $pivotTable = $meta['pivotTable'];
+        $foreignPivotKey = $meta['foreignPivotKey'];
+        $relatedPivotKey = $meta['relatedPivotKey'];
+        $entityClass = $this->entityClass;
+        $pk = $entityClass::getPrimaryKeyField();
+        $relatedTable = $relatedClass::getTableName();
+
+        $ids = array_map(fn($e) => $e->{$pk}, $entities);
+
+        if (empty($ids)) {
+            return;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+
+        $rows = Connection::getInstance()->query(
+            "SELECT r.*, p.{$foreignPivotKey} as _pivot_fk FROM {$relatedTable} r INNER JOIN {$pivotTable} p ON p.{$relatedPivotKey} = r.id WHERE p.{$foreignPivotKey} IN ({$placeholders})",
+            $ids
+        );
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $parentId = $row['_pivot_fk'];
+            unset($row['_pivot_fk']);
+            $grouped[$parentId][] = $relatedClass::hydrate($row);
+        }
+
+        foreach ($entities as $entity) {
+            $entity->setRelation($relationName, $grouped[$entity->{$pk}] ?? []);
+        }
     }
 }
