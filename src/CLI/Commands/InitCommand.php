@@ -189,6 +189,8 @@ HTACCESS;
             "App\\Entities\\": "entities/"
         }
     },
+    "minimum-stability": "alpha",
+    "prefer-stable": true,
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true
