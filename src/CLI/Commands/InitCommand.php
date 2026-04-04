@@ -9,18 +9,24 @@ class InitCommand implements CommandInterface
     public function execute(array $args): int
     {
         $cwd = getcwd();
-        echo "Initializing PHP API Builder project...\n\n";
+        echo "\n  PHP API Builder v2 — Setup\n";
+        echo "  " . str_repeat('=', 36) . "\n\n";
 
         $this->createDirectories($cwd);
         $this->createEnvFile($cwd);
         $this->createIndexFile($cwd);
         $this->createHtaccess($cwd);
+        $this->createComposerJson($cwd);
+        $this->createDockerCompose($cwd);
+        $this->createApiWrapper($cwd);
+        $this->createHealthService($cwd);
 
-        echo "\n  Project initialized successfully!\n";
+        echo "\n  Project initialized successfully!\n\n";
         echo "  Next steps:\n";
-        echo "    1. Configure your .env file\n";
-        echo "    2. php api make:entity YourEntity\n";
-        echo "    3. php api serve\n\n";
+        echo "    1. Edit .env with your database credentials\n";
+        echo "    2. docker compose up -d\n";
+        echo "    3. ./api make:entity YourEntity\n";
+        echo "    4. Open http://localhost:8080/api/v1/health\n\n";
 
         return 0;
     }
@@ -46,31 +52,33 @@ class InitCommand implements CommandInterface
         }
 
         $content = <<<'ENV'
-        # Database
-        DB_DRIVER=mysql
-        DB_HOST=localhost
-        DB_PORT=3306
-        DB_NAME=my_api
-        DB_USERNAME=root
-        DB_PASSWORD=
+# Database
+DB_DRIVER=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_NAME=my_api
+DB_USERNAME=root
+DB_PASSWORD=secret
 
-        # JWT
-        JWT_ALGORITHM=HS256
-        JWT_SECRET=change-this-to-a-random-string-at-least-32-chars
-        JWT_ACCESS_TOKEN_TTL=900
-        JWT_REFRESH_TOKEN_TTL=604800
-        JWT_ISSUER=my-api
-        JWT_AUDIENCE=my-api
+# JWT
+JWT_ALGORITHM=HS256
+JWT_SECRET=change-this-to-a-random-string-at-least-32-chars
+JWT_ACCESS_TOKEN_TTL=900
+JWT_REFRESH_TOKEN_TTL=604800
+JWT_ISSUER=my-api
+JWT_AUDIENCE=my-api
 
-        # CORS
-        CORS_ALLOWED_ORIGINS=*
-        CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
-        CORS_ALLOWED_HEADERS=Content-Type,Authorization,X-Request-ID
+# CORS
+CORS_ALLOWED_ORIGINS=*
+CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
+CORS_ALLOWED_HEADERS=Content-Type,Authorization,X-Request-ID
 
-        # App
-        APP_DEBUG=true
-        API_DOCS=true
-        ENV;
+# App
+APP_PORT=8080
+DB_EXTERNAL_PORT=3306
+APP_DEBUG=true
+API_DOCS=true
+ENV;
 
         file_put_contents($path, $content);
         echo "  Created: .env\n";
@@ -85,49 +93,52 @@ class InitCommand implements CommandInterface
         }
 
         $content = <<<'PHP'
-        <?php
+<?php
 
-        require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
-        use Coagus\PhpApiBuilder\API;
-        use Coagus\PhpApiBuilder\Http\Middleware\CorsMiddleware;
-        use Coagus\PhpApiBuilder\Http\Middleware\SecurityHeadersMiddleware;
-        use Dotenv\Dotenv;
+use Coagus\PhpApiBuilder\API;
+use Coagus\PhpApiBuilder\Http\Middleware\CorsMiddleware;
+use Coagus\PhpApiBuilder\Http\Middleware\SecurityHeadersMiddleware;
+use Coagus\PhpApiBuilder\Http\Middleware\AuthMiddleware;
+use Coagus\PhpApiBuilder\ORM\Connection;
+use Coagus\PhpApiBuilder\Auth\Auth;
+use Dotenv\Dotenv;
 
-        // Load environment
-        $dotenv = Dotenv::createImmutable(__DIR__);
-        $dotenv->safeLoad();
+// Load environment
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->safeLoad();
 
-        // Configure database
-        Coagus\PhpApiBuilder\ORM\Connection::configure([
-            'driver' => $_ENV['DB_DRIVER'] ?? 'mysql',
-            'host' => $_ENV['DB_HOST'] ?? 'localhost',
-            'port' => (int) ($_ENV['DB_PORT'] ?? 3306),
-            'database' => $_ENV['DB_NAME'] ?? '',
-            'username' => $_ENV['DB_USERNAME'] ?? 'root',
-            'password' => $_ENV['DB_PASSWORD'] ?? '',
-        ]);
+// Configure database
+Connection::configure([
+    'driver' => $_ENV['DB_DRIVER'] ?? 'mysql',
+    'host' => $_ENV['DB_HOST'] ?? 'localhost',
+    'port' => (int) ($_ENV['DB_PORT'] ?? 3306),
+    'database' => $_ENV['DB_NAME'] ?? '',
+    'username' => $_ENV['DB_USERNAME'] ?? 'root',
+    'password' => $_ENV['DB_PASSWORD'] ?? '',
+]);
 
-        // Configure auth
-        Coagus\PhpApiBuilder\Auth\Auth::configure([
-            'algorithm' => $_ENV['JWT_ALGORITHM'] ?? 'HS256',
-            'secret' => $_ENV['JWT_SECRET'] ?? null,
-            'access_ttl' => (int) ($_ENV['JWT_ACCESS_TOKEN_TTL'] ?? 900),
-            'refresh_ttl' => (int) ($_ENV['JWT_REFRESH_TOKEN_TTL'] ?? 604800),
-            'issuer' => $_ENV['JWT_ISSUER'] ?? 'my-api',
-            'audience' => $_ENV['JWT_AUDIENCE'] ?? 'my-api',
-        ]);
+// Configure auth
+Auth::configure([
+    'algorithm' => $_ENV['JWT_ALGORITHM'] ?? 'HS256',
+    'secret' => $_ENV['JWT_SECRET'] ?? null,
+    'access_ttl' => (int) ($_ENV['JWT_ACCESS_TOKEN_TTL'] ?? 900),
+    'refresh_ttl' => (int) ($_ENV['JWT_REFRESH_TOKEN_TTL'] ?? 604800),
+    'issuer' => $_ENV['JWT_ISSUER'] ?? 'my-api',
+    'audience' => $_ENV['JWT_AUDIENCE'] ?? 'my-api',
+]);
 
-        // Create and run API
-        $api = new API('App');
-        $api->middleware([
-            CorsMiddleware::class,
-            SecurityHeadersMiddleware::class,
-        ]);
+// Create and run API
+$api = new API('App');
+$api->middleware([
+    CorsMiddleware::class,
+    SecurityHeadersMiddleware::class,
+]);
 
-        $response = $api->run();
-        $response->send();
-        PHP;
+$response = $api->run();
+$response->send();
+PHP;
 
         file_put_contents($path, $content);
         echo "  Created: index.php\n";
@@ -142,13 +153,191 @@ class InitCommand implements CommandInterface
         }
 
         $content = <<<'HTACCESS'
-        RewriteEngine On
-        RewriteCond %{REQUEST_FILENAME} !-f
-        RewriteCond %{REQUEST_FILENAME} !-d
-        RewriteRule ^(.*)$ index.php [QSA,L]
-        HTACCESS;
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+HTACCESS;
 
         file_put_contents($path, $content);
         echo "  Created: .htaccess\n";
+    }
+
+    private function createComposerJson(string $cwd): void
+    {
+        $path = "{$cwd}/composer.json";
+        if (file_exists($path)) {
+            echo "  Skipped: composer.json (already exists)\n";
+            return;
+        }
+
+        $content = <<<'JSON'
+{
+    "name": "app/my-api",
+    "description": "My API built with php-api-builder",
+    "type": "project",
+    "require": {
+        "php": "^8.3",
+        "coagus/php-api-builder": "^2.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "services/",
+            "App\\Entities\\": "entities/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
+JSON;
+
+        file_put_contents($path, $content);
+        echo "  Created: composer.json\n";
+    }
+
+    private function createDockerCompose(string $cwd): void
+    {
+        $path = "{$cwd}/docker-compose.yml";
+        if (file_exists($path)) {
+            echo "  Skipped: docker-compose.yml (already exists)\n";
+            return;
+        }
+
+        $content = <<<'YAML'
+services:
+  app:
+    image: coagus/php-api-builder:latest
+    entrypoint: []
+    command: >
+      sh -c "
+        if [ ! -d vendor ]; then composer install --no-interaction; fi &&
+        php -S 0.0.0.0:8080 -t /app
+      "
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_DATABASE: ${DB_NAME:-my_api}
+    ports:
+      - "${DB_EXTERNAL_PORT:-3306}:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db_data:
+YAML;
+
+        file_put_contents($path, $content);
+        echo "  Created: docker-compose.yml\n";
+    }
+
+    private function createApiWrapper(string $cwd): void
+    {
+        $path = "{$cwd}/api";
+        if (file_exists($path)) {
+            echo "  Skipped: api (already exists)\n";
+            return;
+        }
+
+        $content = <<<'BASH'
+#!/bin/bash
+# ./api — Smart wrapper for php-api-builder CLI
+# Auto-detects PHP local or uses Docker
+
+set -e
+
+# Check if local PHP >= 8.3 is available
+php_available() {
+    if ! command -v php &> /dev/null; then
+        return 1
+    fi
+    local version=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+    local major=$(echo $version | cut -d. -f1)
+    local minor=$(echo $version | cut -d. -f2)
+    if [ "$major" -lt 8 ] || ([ "$major" -eq 8 ] && [ "$minor" -lt 3 ]); then
+        return 1
+    fi
+    return 0
+}
+
+# Check if docker compose app is running
+docker_running() {
+    docker compose ps --status running 2>/dev/null | grep -q "app"
+}
+
+if php_available; then
+    php vendor/bin/api "$@"
+elif docker_running; then
+    docker compose exec app php vendor/bin/api "$@"
+elif command -v docker &> /dev/null; then
+    echo "Running via Docker..."
+    docker run --rm -v "$(pwd):/app" coagus/php-api-builder "$@"
+else
+    echo "Error: Neither PHP (>=8.3) nor Docker found."
+    echo "Install one of:"
+    echo "  PHP 8.3+  -> https://www.php.net/downloads"
+    echo "  Docker    -> https://docs.docker.com/get-docker/"
+    exit 1
+fi
+BASH;
+
+        file_put_contents($path, $content);
+        chmod($path, 0755);
+        echo "  Created: api (CLI wrapper)\n";
+    }
+
+    private function createHealthService(string $cwd): void
+    {
+        $path = "{$cwd}/services/Health.php";
+        if (file_exists($path)) {
+            return;
+        }
+
+        $content = <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App;
+
+use Coagus\PhpApiBuilder\Attributes\PublicResource;
+use Coagus\PhpApiBuilder\Resource\Service;
+
+#[PublicResource]
+class Health extends Service
+{
+    public function get(): void
+    {
+        $this->success([
+            'status' => 'ok',
+            'timestamp' => date('c'),
+        ]);
+    }
+}
+PHP;
+
+        file_put_contents($path, $content);
+        echo "  Created: services/Health.php\n";
     }
 }
