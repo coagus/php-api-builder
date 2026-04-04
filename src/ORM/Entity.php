@@ -76,6 +76,18 @@ abstract class Entity
         return new QueryBuilder(static::class);
     }
 
+    public static function __callStatic(string $name, array $arguments): mixed
+    {
+        $scopeMethod = 'scope' . ucfirst($name);
+
+        if (method_exists(static::class, $scopeMethod)) {
+            $query = static::query();
+            return static::$scopeMethod($query, ...$arguments);
+        }
+
+        throw new \BadMethodCallException("Method [{$name}] does not exist on " . static::class . '.');
+    }
+
     public function save(): static
     {
         $errors = Validator::validate($this);
@@ -165,7 +177,7 @@ abstract class Entity
     protected function beforeDelete(): void {}
     protected function afterDelete(): void {}
 
-    protected static function hydrate(array $row): static
+    public static function hydrate(array $row): static
     {
         $entity = new static();
         $ref = new ReflectionClass($entity);
