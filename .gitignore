@@ -1,5 +1,7 @@
-vendor
-log
-*.env
+vendor/
+log/
+keys/
+.env
 *.DS_Store
 *.lock
+.phpunit.cache/

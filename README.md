@@ -1,310 +1,333 @@
 [![Latest Stable Version](https://poser.pugx.org/coagus/php-api-builder/v/stable)](https://packagist.org/packages/coagus/php-api-builder)
-[![Total Downloads](https://poser.pugx.org/coagus/php-api-builder/downloads)](https://packagist.org/packages/coagus/php-api-builder) 
+[![Total Downloads](https://poser.pugx.org/coagus/php-api-builder/downloads)](https://packagist.org/packages/coagus/php-api-builder)
 [![License](https://poser.pugx.org/coagus/php-api-builder/license)](https://packagist.org/packages/coagus/php-api-builder)
-[![PHP Unit Test](https://github.com/coagus/php-api-builder/workflows/PHP%20Unit%20Test/badge.svg)](https://github.com/coagus/php-api-builder/actions)
+[![Tests](https://github.com/coagus/php-api-builder/workflows/Tests/badge.svg)](https://github.com/coagus/php-api-builder/actions)
+[![PHP 8.3+](https://img.shields.io/badge/php-8.3%2B-blue.svg)](https://www.php.net/)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg)](https://hub.docker.com/r/coagus/php-api-builder)
 
-# PHP API BUILDER 
+# PHP API Builder v2
 
-PHP API Builder is a lightweight and powerful library that streamlines API development in PHP. It provides:
+Build RESTful APIs in PHP in minutes. Define your entities, get CRUD automatically, and focus on your business logic.
 
-- **Clean Architecture**: Enforces a well-structured and maintainable codebase
-- **ORM Integration**: Built-in MySQL database integration with a simple yet powerful ORM
-- **Authentication**: Out-of-the-box JWT authentication support
-- **RESTful Services**: Easy implementation of RESTful endpoints
-- **Error Handling**: Comprehensive error handling and debugging capabilities
-- **Zero Configuration**: Minimal setup required with sensible defaults
-- **PSR-4 Compliant**: Follows PHP-FIG standards for maximum compatibility
+```php
+#[Table('products')]
+#[SoftDelete]
+class Product extends Entity
+{
+    #[PrimaryKey]
+    public private(set) int $id;
 
-Perfect for building robust and scalable APIs while maintaining clean and organized code.
+    #[Required, MaxLength(100)]
+    public string $name { set => trim($value); }
+
+    #[Required]
+    public float $price {
+        set {
+            if ($value < 0) throw new \InvalidArgumentException('Price must be positive');
+            $this->price = round($value, 2);
+        }
+    }
+
+    #[Required, Email, Unique]
+    public string $email { set => strtolower(trim($value)); }
+
+    #[Hidden]
+    public string $password { set => password_hash($value, PASSWORD_ARGON2ID); }
+
+    #[BelongsTo(Category::class)]
+    public int $categoryId;
+
+    #[HasMany(Review::class)]
+    public array $reviews;
+}
+```
+
+That's it. You now have a fully functional API with `GET`, `POST`, `PUT`, `PATCH`, `DELETE` endpoints, pagination, filtering, sorting, validation, soft deletes, and relationships. No controllers, no routes to configure, no boilerplate.
+
+## Features
+
+- **Automatic CRUD** from entity definitions with zero configuration
+- **Powerful ORM** with Active Record pattern, relationships, and 5-level Query Builder
+- **PHP 8.4** property hooks, asymmetric visibility, typed properties, attributes as metadata
+- **Multi-database** support via PDO (MySQL, PostgreSQL, SQLite)
+- **JWT Authentication** with OAuth 2.1 security practices (short-lived tokens, refresh rotation, scopes)
+- **Auto-generated OpenAPI/Swagger** documentation from your entity attributes
+- **Validation via attributes** (`#[Required]`, `#[Email]`, `#[MaxLength]`, `#[Unique]`) -- no config files
+- **Security built-in** with OWASP headers, CORS, input sanitization, SQL injection protection
+- **Docker-first** workflow -- start a project without PHP installed locally
+- **CLI scaffolding** for entities, services, middleware, and tests
+- **Error traceability** with request ID correlation across all layers
+- **AI development skill** included -- install it and your AI assistant knows the library
+
+## Quick Start
+
+### With PHP installed
+
+```bash
+composer create-project coagus/php-api-builder-skeleton my-api
+cd my-api
+./api init
+```
+
+### Without PHP (Docker only)
+
+```bash
+mkdir my-api && cd my-api
+docker run --rm -it -v $(pwd):/app coagus/php-api-builder init
+docker compose up -d
+```
+
+Either way, your API is running in under 5 minutes:
+
+```bash
+curl http://localhost:8080/api/v1/health
+# {"data":{"status":"healthy","timestamp":"2026-04-03T14:30:00Z"}}
+```
+
+## Create Your First Entity
+
+```bash
+./api make:entity User --fields="name:string,email:string,password:string" --soft-delete
+```
+
+This generates `entities/User.php`:
+
+```php
+<?php
+namespace App\Entities;
+
+use Coagus\PhpApiBuilder\ORM\Entity;
+use Coagus\PhpApiBuilder\Attributes\{Table, PrimaryKey, SoftDelete};
+use Coagus\PhpApiBuilder\Validation\Attributes\{Required};
+
+#[Table('users')]
+#[SoftDelete]
+class User extends Entity
+{
+    #[PrimaryKey]
+    public private(set) int $id;
+
+    #[Required]
+    public string $name { set => trim($value); }
+
+    #[Required]
+    public string $email;
+
+    #[Required]
+    public string $password;
+}
+```
+
+Your endpoints are ready:
+
+```
+GET    /api/v1/users              # List with pagination, filtering, sorting
+GET    /api/v1/users/{id}         # Get one
+POST   /api/v1/users              # Create (validates automatically)
+PUT    /api/v1/users/{id}         # Full update
+PATCH  /api/v1/users/{id}         # Partial update
+DELETE /api/v1/users/{id}         # Soft delete
+```
+
+## Services (No Database)
+
+Not everything needs a database. Services handle external APIs, health checks, custom logic:
+
+```php
+#[PublicResource]
+#[Route('health')]
+class Health extends Service
+{
+    public function get(): void
+    {
+        $this->success([
+            'status' => 'healthy',
+            'timestamp' => date('c'),
+        ]);
+    }
+}
+```
+
+## Hybrid Resources (CRUD + Custom Endpoints)
+
+Combine automatic CRUD with custom business logic:
+
+```php
+class UserService extends APIDB
+{
+    protected string $entity = User::class;
+
+    // CRUD works automatically: GET, POST, PUT, PATCH, DELETE
+
+    // Custom: POST /api/v1/users/login
+    public function postLogin(): void
+    {
+        $input = $this->getInput();
+        $user = User::query()->where('email', $input->email)->first();
+
+        if (!$user || !password_verify($input->password, $user->password)) {
+            $this->error('Invalid credentials', 401);
+            return;
+        }
+
+        $this->success(['token' => Auth::generateToken($user)]);
+    }
+}
+```
+
+## Query Builder
+
+Five levels of complexity -- use what you need:
+
+```php
+// Level 1: Shortcuts
+$user = User::find(1);
+$users = User::all();
+
+// Level 2: Fluent
+$users = User::query()
+    ->where('active', true)
+    ->orderBy('created_at', 'desc')
+    ->limit(10)
+    ->get();
+
+// Level 3: Eager loading (no N+1 queries)
+$users = User::query()
+    ->with('orders', 'orders.items')
+    ->where('active', true)
+    ->get();
+
+// Level 4: Reusable scopes
+$users = User::query()->active()->recent(7)->get();
+
+// Level 5: Raw SQL (always parameterized)
+$results = Connection::query(
+    'SELECT u.*, COUNT(o.id) as total FROM users u LEFT JOIN orders o ON o.user_id = u.id GROUP BY u.id HAVING total > ?',
+    [5]
+);
+```
+
+## Validation via Attributes
+
+```php
+#[Table('users')]
+class User extends Entity
+{
+    #[Required, MaxLength(50)]
+    public string $name { set => trim($value); }
+
+    #[Required, Email, Unique]
+    public string $email { set => strtolower(trim($value)); }
+
+    #[Hidden]
+    public string $password { set => password_hash($value, PASSWORD_ARGON2ID); }
+}
+```
+
+`#[Required]` validates presence, `#[Email]` validates format, `#[Unique]` checks the database, `#[Hidden]` excludes the field from responses, and property hooks sanitize on assignment.
+
+## Auto-Generated API Documentation
+
+Your entity attributes generate OpenAPI 3.1 specs automatically:
+
+```
+GET /api/v1/docs            # OpenAPI JSON spec
+GET /api/v1/docs/swagger    # Swagger UI
+GET /api/v1/docs/redoc      # ReDoc UI
+```
+
+No extra annotations needed. `#[Required]` becomes `required`, `#[MaxLength(50)]` becomes `maxLength: 50`, `#[Hidden]` fields are excluded from response schemas.
+
+## CLI Commands
+
+```bash
+./api init                   # Initialize new project (interactive)
+./api serve                  # Development server
+./api env:check              # Verify environment and dependencies
+./api make:entity Product    # Generate entity + test
+./api make:service Payment   # Generate service + test
+./api make:middleware Auth    # Generate middleware
+./api keys:generate          # Generate JWT key pair
+./api docs:generate          # Export OpenAPI spec
+./api test                   # Run tests (Pest)
+./api test --coverage        # Tests with coverage report
+./api skill:install          # Install AI development skill
+```
+
+The `./api` wrapper detects whether to use local PHP or Docker automatically. Teams with mixed setups work seamlessly.
+
+## Database Support
+
+Configure in `.env`:
+
+```bash
+DB_DRIVER=mysql    # mysql | pgsql | sqlite
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=my_database
+DB_USER=root
+DB_PASSWORD=secret
+```
+
+The ORM generates driver-specific SQL through PDO. Switch databases by changing one line.
+
+## Security
+
+Built-in by default, following OWASP recommendations:
+
+- **SQL Injection**: Parameterized queries everywhere (PDO prepared statements)
+- **Security Headers**: `X-Content-Type-Options`, `X-Frame-Options`, HSTS, `Referrer-Policy`
+- **JWT Auth**: Short-lived access tokens (15min), refresh rotation with theft detection
+- **Input Sanitization**: Automatic null byte removal, configurable per-field
+- **CORS**: Configurable via `.env`, validates against dangerous misconfigurations
+- **Sensitive Data**: `#[Hidden]` attributes, `SensitiveDataFilter` in logs
+
+## Project Structure
+
+```
+my-api/
+├── api                     # CLI wrapper (auto-detects PHP vs Docker)
+├── .env                    # Configuration
+├── index.php               # Entry point
+├── entities/               # Database entities (auto CRUD)
+│   ├── User.php
+│   └── Product.php
+├── services/               # Pure services (no DB)
+│   └── Health.php
+├── middleware/              # Custom middleware
+├── tests/                  # Pest tests
+├── docker-compose.yml      # Docker environment
+└── log/                    # Error logs (auto-generated)
+```
+
+## Requirements
+
+- PHP 8.3+ (8.4 recommended for property hooks)
+- Composer 2.x
+- Or just Docker
 
 ## Installation
-
-Use composer to manage your dependencies and download PHP-API-BUILDER:
 
 ```bash
 composer require coagus/php-api-builder
 ```
 
-## Get Started
+## Documentation
 
-For the proper functioning of the API, it is necessary to modify the composer.json file and add the .htaccess and index.php files. With this, we can start the development.
+Full architecture and design documentation is available in [resources/docs/01-analisis-y-diseno.md](resources/docs/01-analisis-y-diseno.md).
 
-```sh
-|-- composer.json
-|-- .htaccess
-|-- index.php
-|-- services
+## AI Development Skill
+
+The library includes an AI skill that teaches Claude Code and Cowork how to work with php-api-builder. Install it and your AI assistant can generate entities, services, queries, and configurations following the library's patterns:
+
+```bash
+./api skill:install
 ```
 
-### composer.json
+## License
 
-To maintain order in our API development, we define a name for our project from which all our services will branch out. For this example, my project will be called 'Services,' and I will specify that it will be developed in the 'services' folder.
+MIT License. See [LICENSE](LICENSE) for details.
 
-```json
-{
-  "require": {
-    "coagus/php-api-builder": "v1.0.0"
-  }
-  "autoload": {
-    "psr-4": {
-      "Services\\": "services/"
-    }
-  }
-}
-```
+## Author
 
-### .htaccess
-
-This file defines the behavior of our server. Generally, the entry point is our index.php, and the URL does not define the folders within the server.
-
-```sh
-# Disable directory listing (prevents showing files in an empty directory)
-Options All -Indexes
-
-# Disable MultiViews option, serving only the exact requested file
-Options -MultiViews
-
-# Enable the URL rewriting engine
-RewriteEngine On
-
-# Redirect all requests that are not existing files to index.php
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^ index.php [QSA,L]
-
-# Set cache headers, establishing Cache-Control as private
-<IfModule mod_headers.c>
-    Header set Cache-Control "private"
-</IfModule>
-```
-
-### index.php
-
-The index.php is the entry point to the API; it only defines the project specified in its namespace.
-
-```php
-<?php
-require_once 'vendor/autoload.php';
-
-$api = new ApiBuilder\API('Services');
-$api->run();
-```
-
-## Examples Demo Service
-
-Create a Demo service file in services/Demo.php
-
-```php
-<?php
-namespace Services;
-
-class Demo
-{
-  public function get()
-  {
-    success('Hello World!');
-  }
-
-  public function postHello()
-  {
-    $input = getInput();
-    success('Hello ' . $input['name'] . '!');
-  }
-}
-```
-
-### GET http://localhost/api/v1/demo
-
-Result:
-
-```json
-{
-  "successful": true,
-  "result": "Hello World!"
-}
-```
-
-### POST http://localhost/api/v1/demo/hello
-
-Request:
-
-```json
-{
-  "name": "Agustin"
-}
-```
-
-Result:
-
-```json
-{
-  "successful": true,
-  "result": "Hello Agustin!"
-}
-```
-
-## Example ORM
-
-### Database
-
-Create your entity in your database, for example User:
-
-```sql
-CREATE TABLE `roles` (
-    `id` int NOT NULL AUTO_INCREMENT,
-    `role` varchar(30) NOT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY (`role`)
-  );
-
-INSERT INTO roles (role)
-VALUES ('Administrator'), ('Operator');
-
-CREATE TABLE `users` (
-    `id` int NOT NULL AUTO_INCREMENT,
-    `name` varchar(50) NOT NULL,
-    `username` varchar(50) NOT NULL,
-    `password` varchar(150) NOT NULL,
-    `email` varchar(70) NOT NULL,
-    `active` tinyint DEFAULT 0,
-    `role_id` int NOT NULL,
-    PRIMARY KEY (`id`),
-    KEY `fk_users_roles_idx` (`role_id`),
-    CONSTRAINT `fk_users_roles` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`),
-    UNIQUE (`username`)
-  );
-
-COMMIT;
-```
-
-### Environment File
-
-Create de environment file ".env"
-
-```shell
-# DataBase configuration
-DB_HOST=yourHost
-DB_NAME=yourDbName
-DB_USERNAME=yourUsername
-DB_PASSWORD=yourPassword
-DB_CHARSET=UTF8
-```
-
-### Entity
-
-create the entity in your API services/entities/User.php
-
-```php
-<?php
-namespace DemoApi\Entities;
-
-use ApiBuilder\ORM\Entity;
-
-class User extends Entity
-{
-  public $id;
-  public $name;
-  public $username;
-  public $password;
-  public $email;
-  public $active;
-  public $roleId;
-}
-```
-
-### POST http://localhost/api/v1/users
-
-Request:
-
-```json
-{
-  "name": "Agustin",
-  "username": "agustin",
-  "password": "Pa$$word",
-  "email": "christian@agustin.gt",
-  "active": 1,
-  "roleId": 1
-}
-```
-
-Result:
-
-```json
-{
-  "successful": true,
-  "result": {
-    "id": 1,
-    "name": "Agustin",
-    "username": "agustin",
-    "password": "Pa$$word",
-    "email": "christian@agustin.gt",
-    "active": 1,
-    "roleId": 1
-  }
-}
-```
-
-### GET http://localhost/api/v1/users
-
-Result:
-
-```json
-{
-  "successful": true,
-  "result": {
-    "pagination": {
-      "count": 1,
-      "page": "0",
-      "rowsPerPage": "10"
-    },
-    "data": [
-      {
-        "id": 1,
-        "name": "Agustin",
-        "username": "agustin",
-        "password": "Pa$$word",
-        "email": "christian@agustin.gt",
-        "active": 1,
-        "roleId": 1
-      }
-    ]
-  }
-}
-```
-
-### PUT http://localhost/api/v1/users/1
-
-Request:
-
-```json
-{
-  "name": "Christian Agustin"
-}
-```
-
-Result:
-
-```json
-{
-  "successful": true,
-  "result": {
-    "id": 1,
-    "name": "Christian Agustin",
-    "username": "agustin",
-    "password": "Pa$$word",
-    "email": "christian@agustin.gt",
-    "active": 1,
-    "roleId": 1
-  }
-}
-```
-
-### DELETE http://localhost/api/v1/users/1
-
-Result:
-
-```json
-{
-  "successful": true,
-  "result": "Deleted!"
-}
-```
+Christian Agustin - [christian@agustin.gt](mailto:christian@agustin.gt)
