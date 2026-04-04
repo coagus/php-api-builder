@@ -65,9 +65,12 @@ abstract class Resource
         return $this->request?->getQueryParams() ?? [];
     }
 
-    protected function getUploadedFile(string $name): mixed
+    protected function getUploadedFile(string $name): ?\Coagus\PhpApiBuilder\Http\UploadedFile
     {
-        // Stub — completed in FASE 11
-        return null;
+        if (!isset($_FILES[$name])) {
+            return null;
+        }
+
+        return new \Coagus\PhpApiBuilder\Http\UploadedFile($_FILES[$name]);
     }
 }
