@@ -1,219 +1,128 @@
 <?php
-namespace ApiBuilder;
 
-use ApiBuilder\Attributes\PublicResource;
+declare(strict_types=1);
+
+namespace Coagus\PhpApiBuilder;
+
+use Coagus\PhpApiBuilder\Helpers\ErrorHandler;
+use Coagus\PhpApiBuilder\Http\Middleware\MiddlewareInterface;
+use Coagus\PhpApiBuilder\Http\Middleware\MiddlewarePipeline;
+use Coagus\PhpApiBuilder\Http\Request;
+use Coagus\PhpApiBuilder\Http\Response;
+use Coagus\PhpApiBuilder\ORM\Entity;
+use Coagus\PhpApiBuilder\Resource\APIDB;
+use Coagus\PhpApiBuilder\Resource\Resource;
 
 class API
 {
-  private $project;
+    private Router $router;
+    private array $middlewareClasses = [];
+    private string $requestId;
 
-  public function __CONSTRUCT($project)
-  {
-    $this->project = $project;
-  }
-
-  private function setCors()
-  {
-    header('Content-Type: application/json');
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-
-    // Si no hay origin, probablemente es una app móvil
-    if (empty($origin)) {
-      return;
+    public function __construct(
+        private readonly string $namespace,
+        private readonly string $apiPrefix = '/api/v1'
+    ) {
+        $this->router = new Router($namespace, $apiPrefix);
+        $this->requestId = $this->generateRequestId();
     }
 
-    // Si existe la clase Cors, usarla para obtener los origins permitidos desde una DB por ejemplo
-    $CorsClass = "$this->project\\Cors";
-    if (class_exists($CorsClass)) {
-      $Cors = new $CorsClass();
-      $allowedOrigins = $Cors->getAllowedOrigins();
-      
-      if (in_array($origin, $allowedOrigins)) {
-        header('Access-Control-Allow-Origin: ' . $origin);
-      } else {
-        error('Origin not allowed', SC_ERROR_FORBIDDEN);
-      }
-    } else {
-      // Si no existe la clase Cors, usar el valor de la variable de entorno CORS_ALLOWED_ORIGINS
-      $allowedOriginsString = $_ENV['CORS_ALLOWED_ORIGINS'] ?? 'http://localhost:3000';
-      $allowedOrigins = array_filter(array_map('trim', explode(',', $allowedOriginsString)));
-      
-      if (in_array($origin, $allowedOrigins)) {
-        header('Access-Control-Allow-Origin: ' . $origin);
-      } else {
-        error('Origin not allowed', SC_ERROR_FORBIDDEN);
-      }
+    public function middleware(array $classes): static
+    {
+        $this->middlewareClasses = $classes;
+
+        return $this;
     }
 
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-      header('Access-Control-Allow-Methods: POST, GET, DELETE, PUT, PATCH, OPTIONS');
-      header('Access-Control-Allow-Headers: Auth, Content-Type, X-Auth-Token, Origin, Authorization');
-      header('Access-Control-Max-Age: 1728000');
-      header('Content-Length: 0');
-      die();
-    }
-  }
+    public function run(?Request $request = null): Response
+    {
+        $request = $request ?? new Request();
 
-  private function validateRequest($requestUri)
-  {
-    $uri = $_SERVER['REQUEST_URI'];
+        try {
+            $pipeline = new MiddlewarePipeline();
+            foreach ($this->middlewareClasses as $middlewareClass) {
+                $middleware = is_string($middlewareClass) ? new $middlewareClass() : $middlewareClass;
+                if ($middleware instanceof MiddlewareInterface) {
+                    $pipeline->pipe($middleware);
+                }
+            }
 
-    $reqUri = strpos($uri, "?")
-      ? array_filter(explode('?', $uri))[0]
-      : $uri;
+            $response = $pipeline->process($request, function (Request $req) {
+                return $this->dispatch($req);
+            });
 
-    if (preg_match('/[A-Z]/', $reqUri))
-      error('Request should not contain uppercase letters.', SC_ERROR_BAD_REQUEST);
+            $response->header('X-Request-ID', $this->requestId);
 
-    if (empty($requestUri))
-      error('Request not exists.', SC_ERROR_BAD_REQUEST);
+            return $response;
+        } catch (\Throwable $e) {
+            $response = ErrorHandler::handle($e, $this->requestId);
+            $response->header('X-Request-ID', $this->requestId);
 
-    if (
-      strpos($uri, '<') !== false ||
-      strpos($uri, '>') !== false ||
-      strpos($uri, '|') !== false ||
-      strpos($uri, '..') !== false ||
-      strpos($uri, './') !== false ||
-      strpos($uri, ' ') !== false
-    )
-      error('Request contains invalid characters (<, >, |, .., ./ and spaces).', SC_ERROR_BAD_REQUEST);
-
-    if (substr($uri, -1) === '/')
-      error('Request URI should not end with a slash (/).', SC_ERROR_BAD_REQUEST);
-
-    if (!isset($requestUri[URI_API]) || $requestUri[URI_API] != 'api')
-      error('Do not have API: host/[api!!!].', SC_ERROR_BAD_REQUEST);
-
-    if (!isset($requestUri[URI_VERSION]) || $requestUri[URI_VERSION] == '')
-      error('Do not have version: host/api/[version!!!].', SC_ERROR_BAD_REQUEST);
-
-    if (!preg_match('/^v\d+$/', $requestUri[URI_VERSION]))
-      error('Version must be in format: host/api/v{number} (e.g. v1).', SC_ERROR_BAD_REQUEST);
-
-    if (!isset($requestUri[URI_RESOURCE]) || $requestUri[URI_RESOURCE] == '')
-      error('Do not have resource: host/api/version/[resource!!!].', SC_ERROR_BAD_REQUEST);
-
-    $resource = $requestUri[URI_RESOURCE];
-    $entityClass = "$this->project\\Entities\\" . toPascalCase(toSingular($resource));
-    $resourceClass = "$this->project\\" . toPascalCase(toSingular($resource));
-
-    if (!isPlural($resource) && class_exists($entityClass))
-      error("Resource '$resource' must be plural.", SC_ERROR_BAD_REQUEST);
-
-    // if (!class_exists($resourceClass) && !class_exists($entityClass))
-    //   error("Class $resourceClass or $entityClass is not defined.", SC_ERROR_BAD_REQUEST);
-
-    if (!class_exists(APIDB))
-      error("APIDB Class is not defined.", SC_ERROR_BAD_REQUEST);
-
-    if (isset($requestUri[URI_SECONDARY_ID]) && !isset($requestUri[URI_OPERATION]))
-      error('Operation is required when secondary ID is provided: host/api/version/resource/primaryId/[operation???]/secondaryId.', SC_ERROR_BAD_REQUEST);
-
-    if (isset($requestUri[URI_SECONDARY_ID]) && !isset($requestUri[URI_OPERATION_PRIMARY_ID]))
-      error('Primary ID is required when secondary ID is provided: host/api/version/resource/[primaryId???]/operation/secondaryId.', SC_ERROR_BAD_REQUEST);
-
-    if (isset($requestUri[URI_SECONDARY_ID]) && !is_numeric($requestUri[URI_SECONDARY_ID]))
-      error('Secondary ID must be a number: host/api/version/resource/primaryId/operation/[secondaryId!!!].', SC_ERROR_BAD_REQUEST);
-
-    if (isset($requestUri[URI_SECONDARY_ID])) {
-      $secondaryResource = $requestUri[URI_OPERATION];
-      $entityClass = "$this->project\\Entities\\" . toPascalCase(toSingular($secondaryResource));
-
-      if (class_exists($entityClass) && !isPlural($secondaryResource))
-        error("Resource '$secondaryResource' must be plural.", SC_ERROR_BAD_REQUEST);
-
-      if (!class_exists($entityClass))
-        error("Must be entity class '$entityClass' if secondary Id is provided.", SC_ERROR_BAD_REQUEST);
+            return $response;
+        }
     }
 
-    if (isset($requestUri[URI_OPERATION]) && !isset($requestUri[URI_OPERATION_PRIMARY_ID]))
-      error('Primary ID is required when operation is provided: host/api/version/resource/[primaryId???]/operation.', SC_ERROR_BAD_REQUEST);
-
-    if (isset($requestUri[URI_OPERATION]) && !is_numeric($requestUri[URI_OPERATION_PRIMARY_ID]))
-      error('Primary ID must be a number: host/api/version/resource/[primaryId!!!]/operation.', SC_ERROR_BAD_REQUEST);
-  }
-
-  private function getRequestUri()
-  {
-    $reqUri = strpos($_SERVER['REQUEST_URI'], "?")
-      ? array_filter(explode('?', $_SERVER['REQUEST_URI']))[0]
-      : $_SERVER['REQUEST_URI'];
-    return array_filter(explode('/', $reqUri));
-  }
-
-  private function getInstanceResourceService($requestUri)
-  {
-    $resource = $requestUri[URI_RESOURCE];
-    $class = getClass($this->project, $resource );
-
-    $prmId = isset($requestUri[URI_OPERATION_PRIMARY_ID]) && is_numeric($requestUri[URI_OPERATION_PRIMARY_ID])
-      ? $requestUri[URI_OPERATION_PRIMARY_ID] : '';
-
-    $scnId = isset($requestUri[URI_SECONDARY_ID]) && is_numeric($requestUri[URI_SECONDARY_ID])
-      ? $requestUri[URI_SECONDARY_ID] : '';
-
-    return new $class($this->project, $resource, $prmId, $scnId);
-  }
-
-  private function getOperation($requestUri)
-  {
-    $operation = $requestUri[URI_OPERATION] ??
-      (isset($requestUri[URI_OPERATION_PRIMARY_ID]) && !is_numeric($requestUri[URI_OPERATION_PRIMARY_ID])
-        ? $requestUri[URI_OPERATION_PRIMARY_ID] : '');
-
-    return strtolower($_SERVER['REQUEST_METHOD']) . toPascalCase(toSingular($operation));
-  }
-
-  private function authorizeOperation($instanceResourceService, $operation)
-  {
-    $className = $instanceResourceService::class;
-
-    $reflectionClass = new \ReflectionClass($className);
-    $attributes = $reflectionClass->getAttributes(PublicResource::class);
-    if (!empty($attributes))
-      return true;
-
-    $reflectionMethod = \ReflectionMethod::createFromMethodName($className . '::' . $operation);
-    $attributes = $reflectionMethod->getAttributes(PublicResource::class);
-    if (!empty($attributes))
-      return true;
-
-    $apiKeyClass = "$this->project\\APIKey";
-    if (class_exists($apiKeyClass)) {
-      $apiKey = new $apiKeyClass();
-      if ($apiKey->validate())
-        return true;
-    } else {
-      $auth = new Auth();
-      if ($auth->validateSession())
-        return true;
+    public function getRouter(): Router
+    {
+        return $this->router;
     }
 
-    error("Operation is not authorized.", SC_ERROR_UNAUTHORIZED);
-  }
+    private function dispatch(Request $request): Response
+    {
+        $result = $this->router->resolve($request->getMethod(), $request->getPath());
 
-  public function run()
-  {
-    try {
-      loadEnv();
-      $this->setCors();
+        if ($result === null) {
+            return ErrorHandler::notFound(
+                "The resource was not found.",
+                $request->getPath()
+            );
+        }
 
-      $requestUri = $this->getRequestUri();
-      $this->validateRequest($requestUri);
+        if (isset($result['error']) && $result['error'] === 'method_not_allowed') {
+            return ErrorHandler::methodNotAllowed($result['method'], $request->getPath());
+        }
 
-      $instanceResourceService = $this->getInstanceResourceService($requestUri);
-      $operation = $this->getOperation($requestUri);
+        $class = $result['class'];
+        $method = $result['method'];
+        $resourceId = $result['resourceId'];
+        $action = $result['action'];
 
-      if (!is_callable([$instanceResourceService, $operation]))
-        error("Operation '$operation' not exists.", SC_ERROR_BAD_REQUEST);
+        // Determine handler
+        if (is_subclass_of($class, Resource::class)) {
+            // Service or APIDB subclass
+            $handler = new $class();
+        } elseif (is_subclass_of($class, Entity::class)) {
+            // Plain Entity → wrap in generic APIDB
+            $handler = new class($class) extends APIDB {
+                public function __construct(string $entityClass)
+                {
+                    $this->entity = $entityClass;
+                }
+            };
+        } else {
+            return ErrorHandler::notFound("The resource was not found.", $request->getPath());
+        }
 
-      $this->authorizeOperation($instanceResourceService, $operation);
+        $handler->setRequest($request);
+        $handler->setResourceId($resourceId);
+        $handler->setAction($action);
 
-      call_user_func([$instanceResourceService, $operation]);
-    } catch (\Exception $e) {
-      $errno = $e->getCode() < 400 ? SC_ERROR_NOT_FOUND : $e->getCode();
-      logError($errno, $e->getMessage(), $e->getFile(), $e->getLine());
-      return response($errno, $e->getMessage());
+        if (!method_exists($handler, $method)) {
+            return ErrorHandler::methodNotAllowed($request->getMethod(), $request->getPath());
+        }
+
+        $handler->{$method}();
+
+        $response = $handler->getResponse();
+        if ($response === null) {
+            return new Response(['data' => null], 200);
+        }
+
+        return $response;
     }
-  }
+
+    private function generateRequestId(): string
+    {
+        return bin2hex(random_bytes(8));
+    }
 }

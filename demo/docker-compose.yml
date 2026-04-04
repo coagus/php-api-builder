@@ -1,0 +1,22 @@
+services:
+  app:
+    image: php:8.4-cli
+    working_dir: /app
+    volumes:
+      - ../:/app
+    command: php -S 0.0.0.0:8000 -t /app/demo
+    ports:
+      - "${APP_PORT:-8000}:8000"
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_DATABASE: ${DB_NAME:-demo_api}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
