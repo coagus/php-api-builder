@@ -1,0 +1,12 @@
+.git
+.github
+.claude
+vendor
+log
+keys
+*.env
+*.DS_Store
+*.lock
+.phpunit.cache
+resources/docs
+resources/skill

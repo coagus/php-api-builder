@@ -50,6 +50,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -60,6 +64,7 @@ jobs:
           context: .
           file: docker/cli/Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             coagus/php-api-builder:${{ github.ref_name }}
             coagus/php-api-builder:latest

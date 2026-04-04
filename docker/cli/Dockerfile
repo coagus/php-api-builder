@@ -20,13 +20,16 @@ RUN docker-php-ext-install \
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install the library globally
-RUN composer global require coagus/php-api-builder --no-interaction
+# Copy the library source
+COPY . /opt/php-api-builder
 
-# Add global composer bin to PATH
-ENV PATH="/root/.composer/vendor/bin:${PATH}"
+# Install dependencies
+RUN cd /opt/php-api-builder && composer install --no-dev --no-interaction --optimize-autoloader
+
+# Create a global symlink for the CLI
+RUN ln -s /opt/php-api-builder/bin/api /usr/local/bin/api
 
 WORKDIR /app
 
-ENTRYPOINT ["php", "api"]
+ENTRYPOINT ["php", "/usr/local/bin/api"]
 CMD ["--help"]
