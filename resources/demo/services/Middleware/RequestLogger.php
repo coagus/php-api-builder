@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace DemoApi;
+namespace App\Middleware;
 
 use Coagus\PhpApiBuilder\Http\Middleware\MiddlewareInterface;
 use Coagus\PhpApiBuilder\Http\Request;
 use Coagus\PhpApiBuilder\Http\Response;
 
-class LogMiddleware implements MiddlewareInterface
+class RequestLogger implements MiddlewareInterface
 {
     public function handle(Request $request, callable $next): Response
     {
@@ -17,7 +17,11 @@ class LogMiddleware implements MiddlewareInterface
         $response = $next($request);
 
         $duration = round((microtime(true) - $start) * 1000, 2);
-        $response->header('X-Response-Time', "{$duration}ms");
+        $method = $request->getMethod();
+        $path = $request->getPath();
+        $status = $response->getStatusCode();
+
+        error_log("[{$method}] {$path} → {$status} ({$duration}ms)");
 
         return $response;
     }

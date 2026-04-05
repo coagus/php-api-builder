@@ -21,6 +21,7 @@ class InitCommand implements CommandInterface
         $this->createDockerCompose($cwd);
         $this->createApiWrapper($cwd);
         $this->createHealthService($cwd);
+        $this->createClaudeSkill($cwd);
 
         echo "\n  Project initialized successfully!\n\n";
         echo "  Next steps:\n";
@@ -360,5 +361,58 @@ PHP;
 
         file_put_contents($path, $content);
         echo "  Created: services/Health.php\n";
+    }
+
+    private function createClaudeSkill(string $cwd): void
+    {
+        $targetDir = "{$cwd}/.claude/skills/php-api-builder";
+        if (is_dir($targetDir)) {
+            echo "  Skipped: .claude/skills/ (already exists)\n";
+            return;
+        }
+
+        // Locate the skill source: Docker image or composer vendor
+        $candidates = [
+            '/opt/php-api-builder/resources/skill/php-api-builder',
+            dirname(__DIR__, 3) . '/resources/skill/php-api-builder',
+        ];
+
+        $sourceDir = null;
+        foreach ($candidates as $candidate) {
+            if (is_dir($candidate)) {
+                $sourceDir = $candidate;
+                break;
+            }
+        }
+
+        if ($sourceDir === null) {
+            return;
+        }
+
+        $this->copyDirectory($sourceDir, $targetDir);
+        echo "  Created: .claude/skills/ (Claude Code AI assistant)\n";
+    }
+
+    private function copyDirectory(string $source, string $target): void
+    {
+        if (!is_dir($target)) {
+            mkdir($target, 0755, true);
+        }
+
+        $items = scandir($source);
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $srcPath = "{$source}/{$item}";
+            $dstPath = "{$target}/{$item}";
+
+            if (is_dir($srcPath)) {
+                $this->copyDirectory($srcPath, $dstPath);
+            } else {
+                copy($srcPath, $dstPath);
+            }
+        }
     }
 }

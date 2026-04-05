@@ -149,7 +149,7 @@ class UserService extends APIDB
             return;
         }
 
-        $token = Auth::generateToken($user);
+        $token = Auth::generateAccessToken($user->toArray());
         $this->success(['token' => $token]);
     }
 
@@ -251,17 +251,10 @@ APIDB auto-wraps responses: GET list returns paginated format, GET by ID returns
 {
     "data": [...],
     "meta": {
-        "currentPage": 1,
-        "perPage": 20,
-        "totalItems": 150,
-        "totalPages": 8
-    },
-    "links": {
-        "self": "/api/v1/users?page=1&per_page=20",
-        "next": "/api/v1/users?page=2&per_page=20",
-        "prev": null,
-        "first": "/api/v1/users?page=1&per_page=20",
-        "last": "/api/v1/users?page=8&per_page=20"
+        "current_page": 1,
+        "per_page": 20,
+        "total": 150,
+        "total_pages": 8
     }
 }
 ```
@@ -339,6 +332,63 @@ JWT_REFRESH_TTL=604800       // 7 days in seconds
 ```
 
 Protected resources (default) require a valid JWT token. Use `#[PublicResource]` to make endpoints public. Scopes control fine-grained access.
+
+### API Key Authentication
+
+As an alternative to JWT, the library supports API key authentication via the `ApiKeyAuth` class:
+
+```php
+use Coagus\PhpApiBuilder\Auth\ApiKeyAuth;
+
+// Option 1: Use default header (X-API-Key) and validate against API_KEY env var
+ApiKeyAuth::configure();
+
+// Option 2: Custom header name and validator
+ApiKeyAuth::configure('X-Custom-Key', function (string $key): bool {
+    return $key === 'my-secret-api-key';
+});
+```
+
+When configured, `AuthMiddleware` checks API key first, then falls back to JWT Bearer token.
+
+## Rate Limiting
+
+Built-in rate limiting middleware with file-based storage (no external dependencies):
+
+```php
+// In index.php — global rate limit
+$api->middleware([
+    new RateLimitMiddleware(limit: 100, windowSeconds: 60),
+    CorsMiddleware::class,
+    SecurityHeadersMiddleware::class,
+]);
+```
+
+Or via environment variables (no constructor args needed):
+```env
+RATE_LIMIT_MAX=100
+RATE_LIMIT_WINDOW=60
+```
+
+Per-resource rate limiting using the `#[Middleware]` attribute:
+```php
+#[Middleware(new RateLimitMiddleware(limit: 20, windowSeconds: 60))]
+class PostService extends APIDB { ... }
+```
+
+Responses include standard headers:
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 97
+X-RateLimit-Reset: 1680000060
+```
+
+When exceeded, returns `429 Too Many Requests` in RFC 7807 format with a `Retry-After` header.
+
+Custom storage can be injected via the `store` parameter:
+```php
+new RateLimitMiddleware(limit: 100, store: new RateLimitStore('/path/to/storage'))
+```
 
 ## Middleware
 
@@ -467,16 +517,15 @@ php api make:entity Product              # Generate entity + test
 php api make:entity Product --fields="name:string,price:float" --soft-delete
 php api make:service Payment             # Generate service + test
 php api make:middleware RateLimiter       # Generate middleware
-php api make:test AuthFlow --feature     # Generate test
 php api keys:generate                    # Generate JWT key pair
 php api docs:generate                    # Export OpenAPI spec
-php api test                             # Run tests (Pest)
-php api test --coverage                  # Tests with coverage report
+php api demo:install                     # Install Blog API demo
+php api demo:remove                      # Remove demo files and tables
 ```
 
 ## Docker Support
 
-`php api init` detects Docker and generates `docker-compose.yml` with the correct database service (MySQL, PostgreSQL, or SQLite). Includes Dockerfile optimized for PHP 8.4, OPcache, and the selected PDO driver.
+`php api init` generates a `docker-compose.yml` with an `app` service (using `coagus/php-api-builder:latest` image with PHP built-in server) and a `db` service (MySQL 8.0). It also generates an `api` CLI wrapper script that auto-detects local PHP or Docker.
 
 ## Security (Built-in)
 
@@ -490,8 +539,13 @@ PHP attributes on entities auto-generate OpenAPI 3.1 specs. No extra documentati
 
 ```php
 $file = $this->getUploadedFile('document');
-$file->validateType(['application/pdf', 'image/jpeg']);
-$file->validateMaxSize(5 * 1024 * 1024);
+$file->isValid();                                           // Check upload succeeded
+$file->originalName();                                      // Sanitized original filename
+$file->mimeType();                                          // Detected via finfo (not client-reported)
+$file->size();                                              // File size in bytes
+$file->extension();                                         // Lowercase file extension
+$file->validateType(['application/pdf', 'image/jpeg']);     // Validate MIME type
+$file->validateMaxSize(5 * 1024 * 1024);                   // Validate max size
 $path = $file->moveTo('uploads/' . uniqid() . '.' . $file->extension());
 ```
 

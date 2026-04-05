@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Coagus\PhpApiBuilder\CLI;
 
+use Coagus\PhpApiBuilder\CLI\Commands\DemoInstallCommand;
+use Coagus\PhpApiBuilder\CLI\Commands\DemoRemoveCommand;
 use Coagus\PhpApiBuilder\CLI\Commands\DocsGenerateCommand;
 use Coagus\PhpApiBuilder\CLI\Commands\EnvCheckCommand;
 use Coagus\PhpApiBuilder\CLI\Commands\InitCommand;
@@ -61,6 +63,8 @@ class Application
             'make:middleware' => new MakeMiddlewareCommand(),
             'keys:generate' => new KeysGenerateCommand(),
             'docs:generate' => new DocsGenerateCommand(),
+            'demo:install' => new DemoInstallCommand(),
+            'demo:remove' => new DemoRemoveCommand(),
         ];
     }
 
@@ -81,6 +85,8 @@ class Application
           make:middleware     Generate a new Middleware class
           keys:generate      Generate RSA key pair for JWT
           docs:generate      Generate OpenAPI specification
+          demo:install       Install Blog API demo (entities, services, seed data)
+          demo:remove        Remove all demo files and tables
 
         Options:
           --help, -h         Show this help

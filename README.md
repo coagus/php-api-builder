@@ -1,7 +1,7 @@
 [![Latest Stable Version](https://poser.pugx.org/coagus/php-api-builder/v/stable)](https://packagist.org/packages/coagus/php-api-builder)
 [![Total Downloads](https://poser.pugx.org/coagus/php-api-builder/downloads)](https://packagist.org/packages/coagus/php-api-builder)
 [![License](https://poser.pugx.org/coagus/php-api-builder/license)](https://packagist.org/packages/coagus/php-api-builder)
-[![Tests](https://github.com/coagus/php-api-builder/workflows/Tests/badge.svg)](https://github.com/coagus/php-api-builder/actions)
+[![Tests](https://github.com/coagus/php-api-builder/actions/workflows/release.yml/badge.svg)](https://github.com/coagus/php-api-builder/actions)
 [![PHP 8.3+](https://img.shields.io/badge/php-8.3%2B-blue.svg)](https://www.php.net/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg)](https://hub.docker.com/r/coagus/php-api-builder)
 
@@ -53,6 +53,7 @@ That's it. You now have a fully functional API with `GET`, `POST`, `PUT`, `PATCH
 - **JWT Authentication** with OAuth 2.1 security practices (short-lived tokens, refresh rotation, scopes)
 - **Auto-generated OpenAPI/Swagger** documentation from your entity attributes
 - **Validation via attributes** (`#[Required]`, `#[Email]`, `#[MaxLength]`, `#[Unique]`) -- no config files
+- **Rate limiting** middleware with file-based storage -- no external dependencies
 - **Security built-in** with OWASP headers, CORS, input sanitization, SQL injection protection
 - **Docker-first** workflow -- start a project without PHP installed locally
 - **CLI scaffolding** for entities, services, middleware, and tests
@@ -63,26 +64,70 @@ That's it. You now have a fully functional API with `GET`, `POST`, `PUT`, `PATCH
 
 ### With PHP installed
 
+1. Create a new project:
+
 ```bash
 composer create-project coagus/php-api-builder-skeleton my-api
-cd my-api
-./api init
+```
+
+2. Initialize and start:
+
+```bash
+cd my-api && ./api init
 ```
 
 ### Without PHP (Docker only)
 
+1. Create your project directory:
+
 ```bash
 mkdir my-api && cd my-api
+```
+
+2. Initialize the project:
+
+```bash
 docker run --rm -it -v $(pwd):/app coagus/php-api-builder init
+```
+
+3. Start the services:
+
+```bash
 docker compose up -d
 ```
 
-Either way, your API is running in under 5 minutes:
+4. Verify it works:
 
 ```bash
 curl http://localhost:8080/api/v1/health
-# {"data":{"status":"healthy","timestamp":"2026-04-03T14:30:00Z"}}
 ```
+
+> **Running CLI commands without PHP:** Once `docker compose up -d` is running, enter the container and use the CLI from there:
+> ```bash
+> docker compose exec app bash
+> php vendor/bin/api make:entity Product
+> ```
+> Alternatively, the `./api` wrapper auto-detects Docker and works without entering the container.
+
+## Try the Demo
+
+Explore all library features with a ready-made Blog API demo:
+
+1. Install the demo (after init + docker compose up):
+
+```bash
+./api demo:install
+```
+
+2. Open Swagger UI at `http://localhost:8080/api/v1/docs/swagger`
+
+3. When done exploring, clean up:
+
+```bash
+./api demo:remove
+```
+
+The demo creates a complete Blog API with Users, Posts, Comments, and Tags -- showcasing entities, services, relationships, JWT auth, validation, rate limiting, middleware, and OpenAPI documentation.
 
 ## Create Your First Entity
 

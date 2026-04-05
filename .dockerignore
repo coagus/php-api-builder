@@ -9,4 +9,3 @@ keys
 *.lock
 .phpunit.cache
 resources/docs
-resources/skill
