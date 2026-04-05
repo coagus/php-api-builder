@@ -5,17 +5,15 @@ declare(strict_types=1);
 namespace App;
 
 use Coagus\PhpApiBuilder\Attributes\Middleware;
-use Coagus\PhpApiBuilder\Attributes\Route;
 use Coagus\PhpApiBuilder\ORM\Connection;
 use Coagus\PhpApiBuilder\Resource\APIDB;
-use App\Entities\Post;
+use App\Entities\Post as PostEntity;
 use App\Middleware\RequestLogger;
 
-#[Route('posts')]
 #[Middleware(RequestLogger::class)]
-class PostService extends APIDB
+class Post extends APIDB
 {
-    protected string $entity = Post::class;
+    protected string $entity = PostEntity::class;
 
     public function patchPublish(): void
     {
@@ -25,7 +23,7 @@ class PostService extends APIDB
             return;
         }
 
-        $post = Post::find((int) $id);
+        $post = PostEntity::find((int) $id);
         if (!$post) {
             $this->error('Not Found', 404, 'Post not found.');
             return;
@@ -47,7 +45,7 @@ class PostService extends APIDB
             return;
         }
 
-        $post = Post::find((int) $id);
+        $post = PostEntity::find((int) $id);
         if (!$post) {
             $this->error('Not Found', 404, 'Post not found.');
             return;

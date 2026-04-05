@@ -344,6 +344,7 @@ declare(strict_types=1);
 namespace App;
 
 use Coagus\PhpApiBuilder\Attributes\PublicResource;
+use Coagus\PhpApiBuilder\ORM\Connection;
 use Coagus\PhpApiBuilder\Resource\Service;
 
 #[PublicResource]
@@ -351,9 +352,18 @@ class Health extends Service
 {
     public function get(): void
     {
+        $db = 'disconnected';
+        try {
+            Connection::getInstance()->query('SELECT 1');
+            $db = 'connected';
+        } catch (\Exception $e) {
+            $db = 'error: ' . $e->getMessage();
+        }
+
         $this->success([
             'status' => 'ok',
             'timestamp' => date('c'),
+            'database' => $db,
         ]);
     }
 }

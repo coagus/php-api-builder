@@ -11,9 +11,9 @@ class DemoInstallCommand implements CommandInterface
         'entities/Post.php',
         'entities/Comment.php',
         'entities/Tag.php',
-        'services/AuthService.php',
-        'services/PostService.php',
-        'services/StatsService.php',
+        'services/Auth.php',
+        'services/Post.php',
+        'services/Stat.php',
         'services/Middleware/RequestLogger.php',
     ];
 
@@ -142,17 +142,14 @@ class DemoInstallCommand implements CommandInterface
             $dsn = "{$driver}:host={$host};port={$port};dbname={$dbName};charset=utf8mb4";
             $pdo = new \PDO($dsn, $username, $password, [
                 \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_EMULATE_PREPARES => true,
             ]);
 
             $sql = file_get_contents($schemaFile);
-            $statements = array_filter(
-                array_map('trim', explode(';', $sql)),
-                fn(string $s) => $s !== '' && !str_starts_with($s, '--')
-            );
 
-            foreach ($statements as $statement) {
-                $pdo->exec($statement);
-            }
+            // Remove SQL comments before executing
+            $sql = preg_replace('/--.*$/m', '', $sql);
+            $pdo->exec($sql);
 
             echo "  Database: tables created and seed data inserted\n";
         } catch (\Exception $e) {

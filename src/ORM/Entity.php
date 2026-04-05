@@ -304,7 +304,15 @@ abstract class Entity
                     if ($value === null && $prop->getType() && !$prop->getType()->allowsNull()) {
                         continue;
                     }
-                    $entity->{$camelName} = self::castValueStatic($prop, $value);
+                    $castedValue = self::castValueStatic($prop, $value);
+
+                    // Use reflection for private(set) properties (PHP 8.4+)
+                    if (PHP_VERSION_ID >= 80400
+                        && ($prop->isProtectedSet() || $prop->isPrivateSet())) {
+                        $prop->setRawValueWithoutLazyInitialization($entity, $castedValue);
+                    } else {
+                        $entity->{$camelName} = $castedValue;
+                    }
                 }
             }
         }
@@ -332,7 +340,16 @@ abstract class Entity
 
         $id = Connection::getInstance()->lastInsertId();
         if ($id !== false && $id !== '0') {
-            $this->{$pk} = (int) $id;
+            $ref = new ReflectionClass($this);
+            $prop = $ref->getProperty($pk);
+            $castedId = (int) $id;
+
+            if (PHP_VERSION_ID >= 80400
+                && ($prop->isProtectedSet() || $prop->isPrivateSet())) {
+                $prop->setRawValueWithoutLazyInitialization($this, $castedId);
+            } else {
+                $this->{$pk} = $castedId;
+            }
         }
     }
 

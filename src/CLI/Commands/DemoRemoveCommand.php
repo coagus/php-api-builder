@@ -11,9 +11,9 @@ class DemoRemoveCommand implements CommandInterface
         'entities/Post.php',
         'entities/Comment.php',
         'entities/Tag.php',
-        'services/AuthService.php',
-        'services/PostService.php',
-        'services/StatsService.php',
+        'services/Auth.php',
+        'services/Post.php',
+        'services/Stat.php',
         'services/Middleware/RequestLogger.php',
         'demo-schema.sql',
     ];

@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App;
 
 use Coagus\PhpApiBuilder\Attributes\PublicResource;
-use Coagus\PhpApiBuilder\Attributes\Route;
-use Coagus\PhpApiBuilder\Auth\Auth;
+use Coagus\PhpApiBuilder\Auth\Auth as JwtAuth;
 use Coagus\PhpApiBuilder\Resource\APIDB;
 use App\Entities\User;
 
-#[Route('auth')]
 #[PublicResource]
-class AuthService extends APIDB
+class Auth extends APIDB
 {
     protected string $entity = User::class;
 
@@ -34,7 +32,7 @@ class AuthService extends APIDB
         ]);
         $user->save();
 
-        $token = Auth::generateAccessToken($user->toArray());
+        $token = JwtAuth::generateAccessToken($user->toArray());
         $this->created([
             'user' => $user->toArray(),
             'token' => $token,
@@ -51,8 +49,8 @@ class AuthService extends APIDB
             return;
         }
 
-        $accessToken = Auth::generateAccessToken($user->toArray());
-        $refreshToken = Auth::generateRefreshToken($user->id);
+        $accessToken = JwtAuth::generateAccessToken($user->toArray());
+        $refreshToken = JwtAuth::generateRefreshToken($user->id);
 
         $this->success([
             'access_token' => $accessToken,
@@ -72,7 +70,7 @@ class AuthService extends APIDB
         }
 
         try {
-            $decoded = Auth::validateToken($refreshToken);
+            $decoded = JwtAuth::validateToken($refreshToken);
 
             if (($decoded->type ?? null) !== 'refresh') {
                 $this->error('Unauthorized', 401, 'Invalid refresh token.');
@@ -85,8 +83,8 @@ class AuthService extends APIDB
                 return;
             }
 
-            $accessToken = Auth::generateAccessToken($user->toArray());
-            $newRefreshToken = Auth::generateRefreshToken($user->id, $decoded->family_id ?? null);
+            $accessToken = JwtAuth::generateAccessToken($user->toArray());
+            $newRefreshToken = JwtAuth::generateRefreshToken($user->id, $decoded->family_id ?? null);
 
             $this->success([
                 'access_token' => $accessToken,
