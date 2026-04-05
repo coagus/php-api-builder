@@ -101,9 +101,7 @@ require __DIR__ . '/vendor/autoload.php';
 use Coagus\PhpApiBuilder\API;
 use Coagus\PhpApiBuilder\Http\Middleware\CorsMiddleware;
 use Coagus\PhpApiBuilder\Http\Middleware\SecurityHeadersMiddleware;
-use Coagus\PhpApiBuilder\Http\Middleware\AuthMiddleware;
 use Coagus\PhpApiBuilder\ORM\Connection;
-use Coagus\PhpApiBuilder\Auth\Auth;
 use Dotenv\Dotenv;
 
 // Load environment
@@ -118,16 +116,6 @@ Connection::configure([
     'database' => $_ENV['DB_NAME'] ?? '',
     'username' => $_ENV['DB_USERNAME'] ?? 'root',
     'password' => $_ENV['DB_PASSWORD'] ?? '',
-]);
-
-// Configure auth
-Auth::configure([
-    'algorithm' => $_ENV['JWT_ALGORITHM'] ?? 'HS256',
-    'secret' => $_ENV['JWT_SECRET'] ?? null,
-    'access_ttl' => (int) ($_ENV['JWT_ACCESS_TOKEN_TTL'] ?? 900),
-    'refresh_ttl' => (int) ($_ENV['JWT_REFRESH_TOKEN_TTL'] ?? 604800),
-    'issuer' => $_ENV['JWT_ISSUER'] ?? 'my-api',
-    'audience' => $_ENV['JWT_AUDIENCE'] ?? 'my-api',
 ]);
 
 // Create and run API
