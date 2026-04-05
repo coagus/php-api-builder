@@ -84,9 +84,8 @@ class Response
             }
         }
 
-        $json = $this->toJson();
-        if ($json !== '') {
-            echo $json;
+        if ($this->body !== null) {
+            echo is_string($this->body) ? $this->body : $this->toJson();
         }
 
         $this->sent = true;
