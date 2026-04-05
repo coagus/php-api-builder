@@ -144,6 +144,7 @@ class API
 
         $specBuilder = new SpecBuilder($this->namespace, '1.0.0', $this->apiPrefix);
         $this->discoverEntities($specBuilder);
+        $this->discoverServices($specBuilder);
         $handler = new DocsController($specBuilder);
         $handler->setRequest($request);
 
@@ -173,6 +174,27 @@ class API
                 $className = $entitiesNamespace . pathinfo($file, PATHINFO_FILENAME);
                 if (class_exists($className) && is_subclass_of($className, Entity::class)) {
                     $specBuilder->addEntity($className);
+                }
+            }
+        }
+    }
+
+    private function discoverServices(SpecBuilder $specBuilder): void
+    {
+        $autoloadPaths = [
+            getcwd() . '/services',
+            getcwd() . '/src/Services',
+        ];
+
+        foreach ($autoloadPaths as $dir) {
+            if (!is_dir($dir)) {
+                continue;
+            }
+
+            foreach (glob("{$dir}/*.php") as $file) {
+                $className = $this->namespace . '\\' . pathinfo($file, PATHINFO_FILENAME);
+                if (class_exists($className) && is_subclass_of($className, Resource::class)) {
+                    $specBuilder->addService($className);
                 }
             }
         }

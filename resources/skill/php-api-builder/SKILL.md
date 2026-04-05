@@ -533,7 +533,37 @@ The library includes a `SecurityHeadersMiddleware` enabled by default that adds 
 
 ## OpenAPI/Swagger Auto-Generation
 
-PHP attributes on entities auto-generate OpenAPI 3.1 specs. No extra documentation needed. Available at `/api/v1/docs` (JSON), `/api/v1/docs/swagger` (Swagger UI), `/api/v1/docs/redoc` (ReDoc).
+The library auto-generates OpenAPI 3.1 specs from entities and services. No extra documentation needed.
+
+### Endpoints
+
+- `GET /api/v1/docs` — OpenAPI JSON spec
+- `GET /api/v1/docs/swagger` — Swagger UI (interactive)
+- `GET /api/v1/docs/redoc` — ReDoc (read-only)
+
+### What gets documented automatically
+
+- **Entities**: Full CRUD paths (GET list, GET by ID, POST, PUT, PATCH, DELETE) with schemas generated from PHP attributes (`#[Required]`, `#[MaxLength]`, `#[Email]`, etc.)
+- **Services**: Custom action endpoints discovered via method naming convention (`postLogin` → `POST /resource/login`)
+- **Security**: Endpoints marked with `#[PublicResource]` show as public; all others require Bearer token
+
+### Using Swagger UI for testing
+
+1. Open `http://localhost:8080/api/v1/docs/swagger`
+2. For protected endpoints, first call the login endpoint to get a JWT token
+3. Click **"Authorize"** (lock icon at top right), paste the `access_token`, click **"Authorize"**
+4. Now all protected endpoints will include the Bearer token automatically
+
+### Enhancing documentation with attributes
+
+Use `#[Description]` and `#[Example]` on entity properties to enrich the generated docs:
+
+```php
+#[Required, MaxLength(200)]
+#[Description('The title of the blog post')]
+#[Example('Getting Started with PHP API Builder')]
+public string $title;
+```
 
 ## File Uploads
 

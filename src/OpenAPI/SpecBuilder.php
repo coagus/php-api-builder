@@ -6,7 +6,9 @@ namespace Coagus\PhpApiBuilder\OpenAPI;
 
 use Coagus\PhpApiBuilder\Attributes\PublicResource;
 use Coagus\PhpApiBuilder\Helpers\Utils;
+use Coagus\PhpApiBuilder\Resource\APIDB;
 use ReflectionClass;
+use ReflectionMethod;
 
 class SpecBuilder
 {
@@ -14,6 +16,7 @@ class SpecBuilder
     private string $version;
     private string $apiPrefix;
     private array $entityClasses = [];
+    private array $serviceClasses = [];
 
     public function __construct(string $title = 'API', string $version = '1.0.0', string $apiPrefix = '/api/v1')
     {
@@ -27,11 +30,26 @@ class SpecBuilder
         $ref = new ReflectionClass($entityClass);
         $shortName = $ref->getShortName();
         $path = $resourcePath ?? Utils::camelToSnake($shortName) . 's';
-        // Convert snake to kebab for URL
         $path = str_replace('_', '-', $path);
 
         $this->entityClasses[] = [
             'class' => $entityClass,
+            'name' => $shortName,
+            'path' => $path,
+        ];
+
+        return $this;
+    }
+
+    public function addService(string $serviceClass, ?string $resourcePath = null): static
+    {
+        $ref = new ReflectionClass($serviceClass);
+        $shortName = $ref->getShortName();
+        $path = $resourcePath ?? Utils::camelToSnake($shortName);
+        $path = str_replace('_', '-', $path);
+
+        $this->serviceClasses[] = [
+            'class' => $serviceClass,
             'name' => $shortName,
             'path' => $path,
         ];
@@ -72,12 +90,110 @@ class SpecBuilder
             $spec['components']['schemas'][$entity['name'] . 'Create'] = $createSchema;
         }
 
+        foreach ($this->serviceClasses as $service) {
+            $paths = $this->buildServicePaths($service);
+            foreach ($paths as $pathKey => $methods) {
+                if (isset($spec['paths'][$pathKey])) {
+                    $spec['paths'][$pathKey] = array_merge($spec['paths'][$pathKey], $methods);
+                } else {
+                    $spec['paths'][$pathKey] = $methods;
+                }
+            }
+        }
+
         return $spec;
     }
 
     public function toJson(): string
     {
         return json_encode($this->build(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    private function buildServicePaths(array $service): array
+    {
+        $basePath = "{$this->apiPrefix}/{$service['path']}";
+        $class = $service['class'];
+        $isPublic = $this->isPublicResource($class);
+        $isApidb = is_subclass_of($class, APIDB::class);
+        $ref = new ReflectionClass($class);
+        $paths = [];
+
+        // If it's an APIDB subclass, its CRUD is already covered by entity paths.
+        // Only add the standard get() for pure Services.
+        if (!$isApidb) {
+            $standardMethods = ['get', 'post', 'put', 'patch', 'delete'];
+            foreach ($standardMethods as $httpMethod) {
+                if ($ref->hasMethod($httpMethod) && $ref->getMethod($httpMethod)->getDeclaringClass()->getName() === $class) {
+                    $operation = [
+                        'summary' => ucfirst($httpMethod) . " {$service['path']}",
+                        'tags' => [$service['name']],
+                        'responses' => [
+                            '200' => ['description' => 'Success'],
+                        ],
+                    ];
+
+                    if ($isPublic) {
+                        $operation['security'] = [];
+                    }
+
+                    $paths[$basePath][$httpMethod] = $operation;
+                }
+            }
+        }
+
+        // Discover custom action methods (postLogin, patchPublish, etc.)
+        foreach ($ref->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+            if ($method->isStatic() || $method->isAbstract()) {
+                continue;
+            }
+
+            // Only methods declared in this class, not inherited
+            if ($method->getDeclaringClass()->getName() !== $class) {
+                continue;
+            }
+
+            $methodName = $method->getName();
+
+            if (!preg_match('/^(get|post|put|patch|delete)([A-Z].*)$/', $methodName, $matches)) {
+                continue;
+            }
+
+            $httpMethod = strtolower($matches[1]);
+            $action = lcfirst($matches[2]);
+            $actionKebab = str_replace('_', '-', Utils::camelToSnake($action));
+
+            $actionPath = "{$basePath}/{$actionKebab}";
+            $summary = ucfirst($actionKebab) . " — {$service['name']}";
+
+            $operation = [
+                'summary' => str_replace('-', ' ', $summary),
+                'tags' => [$service['name']],
+                'responses' => [
+                    '200' => ['description' => 'Success'],
+                    '400' => ['description' => 'Bad Request'],
+                    '401' => ['description' => 'Unauthorized'],
+                ],
+            ];
+
+            if (in_array($httpMethod, ['post', 'put', 'patch'])) {
+                $operation['requestBody'] = [
+                    'required' => true,
+                    'content' => [
+                        'application/json' => [
+                            'schema' => ['type' => 'object'],
+                        ],
+                    ],
+                ];
+            }
+
+            if ($isPublic) {
+                $operation['security'] = [];
+            }
+
+            $paths[$actionPath][$httpMethod] = $operation;
+        }
+
+        return $paths;
     }
 
     private function buildEntityPaths(array $entity): array
@@ -89,6 +205,7 @@ class SpecBuilder
         $listPath = [
             'get' => [
                 'summary' => "List {$entity['path']}",
+                'tags' => [$name],
                 'parameters' => [
                     ['name' => 'page', 'in' => 'query', 'schema' => ['type' => 'integer', 'default' => 1]],
                     ['name' => 'per_page', 'in' => 'query', 'schema' => ['type' => 'integer', 'default' => 15]],
@@ -114,6 +231,7 @@ class SpecBuilder
             ],
             'post' => [
                 'summary' => "Create {$name}",
+                'tags' => [$name],
                 'requestBody' => [
                     'required' => true,
                     'content' => [
@@ -132,6 +250,7 @@ class SpecBuilder
         $itemPath = [
             'get' => [
                 'summary' => "Get {$name} by ID",
+                'tags' => [$name],
                 'parameters' => [
                     ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
                 ],
@@ -154,6 +273,7 @@ class SpecBuilder
             ],
             'put' => [
                 'summary' => "Replace {$name}",
+                'tags' => [$name],
                 'parameters' => [
                     ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
                 ],
@@ -165,6 +285,7 @@ class SpecBuilder
             ],
             'patch' => [
                 'summary' => "Update {$name}",
+                'tags' => [$name],
                 'parameters' => [
                     ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
                 ],
@@ -175,6 +296,7 @@ class SpecBuilder
             ],
             'delete' => [
                 'summary' => "Delete {$name}",
+                'tags' => [$name],
                 'parameters' => [
                     ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
                 ],
@@ -183,8 +305,11 @@ class SpecBuilder
         ];
 
         if ($isPublic) {
-            unset($listPath['get']['security'], $listPath['post']['security']);
-            unset($itemPath['get']['security']);
+            $listPath['get']['security'] = [];
+            $listPath['post']['security'] = [];
+            foreach ($itemPath as &$op) {
+                $op['security'] = [];
+            }
         }
 
         return [
