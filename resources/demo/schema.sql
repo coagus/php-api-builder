@@ -47,21 +47,21 @@ CREATE TABLE IF NOT EXISTS post_tags (
 );
 
 -- Seed data
-INSERT INTO users (name, email, password, active) VALUES
+INSERT IGNORE INTO users (name, email, password, active) VALUES
     ('Admin', 'admin@demo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1),
     ('Editor', 'editor@demo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1);
 -- Default password for both: "password"
 
-INSERT INTO tags (name) VALUES ('php'), ('api'), ('tutorial'), ('docker'), ('rest');
+INSERT IGNORE INTO tags (name) VALUES ('php'), ('api'), ('tutorial'), ('docker'), ('rest');
 
-INSERT INTO posts (title, slug, body, status, user_id) VALUES
+INSERT IGNORE INTO posts (title, slug, body, status, user_id) VALUES
     ('Getting Started with PHP API Builder', 'getting-started-with-php-api-builder', 'Learn how to build REST APIs in minutes with php-api-builder.', 'published', 1),
     ('Understanding Entities', 'understanding-entities', 'Entities map PHP classes to database tables using attributes.', 'published', 1),
     ('Working with Relationships', 'working-with-relationships', 'BelongsTo, HasMany, and BelongsToMany relationships explained.', 'draft', 2);
 
-INSERT INTO post_tags (post_id, tag_id) VALUES (1, 1), (1, 2), (1, 5), (2, 1), (2, 3), (3, 1), (3, 2);
+INSERT IGNORE INTO post_tags (post_id, tag_id) VALUES (1, 1), (1, 2), (1, 5), (2, 1), (2, 3), (3, 1), (3, 2);
 
-INSERT INTO comments (body, post_id, user_id) VALUES
+INSERT IGNORE INTO comments (body, post_id, user_id) VALUES
     ('Great introduction!', 1, 2),
     ('Very helpful, thanks.', 1, 2),
     ('Clear explanation of entities.', 2, 1);
