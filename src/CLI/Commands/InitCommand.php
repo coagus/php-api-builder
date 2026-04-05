@@ -17,6 +17,7 @@ class InitCommand implements CommandInterface
         $this->createIndexFile($cwd);
         $this->createHtaccess($cwd);
         $this->createComposerJson($cwd);
+        $this->createRouterFile($cwd);
         $this->createDockerCompose($cwd);
         $this->createApiWrapper($cwd);
         $this->createHealthService($cwd);
@@ -203,6 +204,36 @@ JSON;
         echo "  Created: composer.json\n";
     }
 
+    private function createRouterFile(string $cwd): void
+    {
+        $path = "{$cwd}/router.php";
+        if (file_exists($path)) {
+            echo "  Skipped: router.php (already exists)\n";
+            return;
+        }
+
+        $content = <<<'PHP'
+<?php
+
+// Router for PHP built-in server
+// Routes all requests to index.php except existing files
+
+$uri = $_SERVER['REQUEST_URI'];
+$path = parse_url($uri, PHP_URL_PATH);
+
+// Serve existing files directly (CSS, JS, images, etc.)
+if ($path !== '/' && file_exists(__DIR__ . $path) && !is_dir(__DIR__ . $path)) {
+    return false;
+}
+
+// Route everything else to index.php
+require __DIR__ . '/index.php';
+PHP;
+
+        file_put_contents($path, $content);
+        echo "  Created: router.php\n";
+    }
+
     private function createDockerCompose(string $cwd): void
     {
         $path = "{$cwd}/docker-compose.yml";
@@ -219,7 +250,7 @@ services:
     command: >
       sh -c "
         if [ ! -d vendor ]; then composer install --no-interaction; fi &&
-        php -S 0.0.0.0:8080 -t /app
+        php -S 0.0.0.0:8080 -t /app /app/router.php
       "
     working_dir: /app
     volumes:

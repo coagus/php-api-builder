@@ -14,7 +14,9 @@ class ServeCommand implements CommandInterface
         echo "Starting PHP development server at http://{$host}:{$port}\n";
         echo "Press Ctrl+C to stop.\n\n";
 
-        passthru("php -S {$host}:{$port} -t " . getcwd());
+        $cwd = getcwd();
+        $router = file_exists("{$cwd}/router.php") ? "{$cwd}/router.php" : '';
+        passthru("php -S {$host}:{$port} -t {$cwd} {$router}");
 
         return 0;
     }
