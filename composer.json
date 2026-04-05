@@ -6,7 +6,7 @@
     "homepage": "https://github.com/coagus/php-api-builder",
     "keywords": ["php", "api", "rest", "orm", "crud", "jwt", "openapi"],
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "firebase/php-jwt": "^7.0",
         "monolog/monolog": "^3.5",
         "vlucas/phpdotenv": "^5.6"

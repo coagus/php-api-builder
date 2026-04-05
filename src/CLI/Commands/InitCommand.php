@@ -167,7 +167,7 @@ HTACCESS;
     "description": "My API built with php-api-builder",
     "type": "project",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "coagus/php-api-builder": "^2.0"
     },
     "require-dev": {
@@ -289,7 +289,7 @@ YAML;
 
 set -e
 
-# Check if local PHP >= 8.3 is available
+# Check if local PHP >= 8.4 is available
 php_available() {
     if ! command -v php &> /dev/null; then
         return 1
@@ -297,7 +297,7 @@ php_available() {
     local version=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
     local major=$(echo $version | cut -d. -f1)
     local minor=$(echo $version | cut -d. -f2)
-    if [ "$major" -lt 8 ] || ([ "$major" -eq 8 ] && [ "$minor" -lt 3 ]); then
+    if [ "$major" -lt 8 ] || ([ "$major" -eq 8 ] && [ "$minor" -lt 4 ]); then
         return 1
     fi
     return 0
@@ -316,9 +316,9 @@ elif command -v docker &> /dev/null; then
     echo "Running via Docker..."
     docker run --rm -v "$(pwd):/app" coagus/php-api-builder "$@"
 else
-    echo "Error: Neither PHP (>=8.3) nor Docker found."
+    echo "Error: Neither PHP (>=8.4) nor Docker found."
     echo "Install one of:"
-    echo "  PHP 8.3+  -> https://www.php.net/downloads"
+    echo "  PHP 8.4+  -> https://www.php.net/downloads"
     echo "  Docker    -> https://docs.docker.com/get-docker/"
     exit 1
 fi

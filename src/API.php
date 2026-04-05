@@ -9,6 +9,8 @@ use Coagus\PhpApiBuilder\Http\Middleware\MiddlewareInterface;
 use Coagus\PhpApiBuilder\Http\Middleware\MiddlewarePipeline;
 use Coagus\PhpApiBuilder\Http\Request;
 use Coagus\PhpApiBuilder\Http\Response;
+use Coagus\PhpApiBuilder\OpenAPI\DocsController;
+use Coagus\PhpApiBuilder\OpenAPI\SpecBuilder;
 use Coagus\PhpApiBuilder\ORM\Entity;
 use Coagus\PhpApiBuilder\Resource\APIDB;
 use Coagus\PhpApiBuilder\Resource\Resource;
@@ -69,6 +71,12 @@ class API
 
     private function dispatch(Request $request): Response
     {
+        // Built-in docs route
+        $docsResponse = $this->handleDocs($request);
+        if ($docsResponse !== null) {
+            return $docsResponse;
+        }
+
         $result = $this->router->resolve($request->getMethod(), $request->getPath());
 
         if ($result === null) {
@@ -119,6 +127,30 @@ class API
         }
 
         return $response;
+    }
+
+    private function handleDocs(Request $request): ?Response
+    {
+        if ($request->getMethod() !== 'GET') {
+            return null;
+        }
+
+        $path = rtrim($request->getPath(), '/');
+        $docsPrefix = $this->apiPrefix . '/docs';
+
+        if ($path !== $docsPrefix && !str_starts_with($path, "{$docsPrefix}/")) {
+            return null;
+        }
+
+        $specBuilder = new SpecBuilder($this->namespace, '1.0.0', $this->apiPrefix);
+        $handler = new DocsController($specBuilder);
+        $handler->setRequest($request);
+
+        $action = substr($path, strlen($docsPrefix) + 1) ?: null;
+        $handler->setAction($action);
+        $handler->get();
+
+        return $handler->getResponse();
     }
 
     private function generateRequestId(): string

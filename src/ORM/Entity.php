@@ -306,9 +306,7 @@ abstract class Entity
                     }
                     $castedValue = self::castValueStatic($prop, $value);
 
-                    // Use reflection for private(set) properties (PHP 8.4+)
-                    if (PHP_VERSION_ID >= 80400
-                        && ($prop->isProtectedSet() || $prop->isPrivateSet())) {
+                    if ($prop->isProtectedSet() || $prop->isPrivateSet()) {
                         $prop->setRawValueWithoutLazyInitialization($entity, $castedValue);
                     } else {
                         $entity->{$camelName} = $castedValue;
@@ -344,8 +342,7 @@ abstract class Entity
             $prop = $ref->getProperty($pk);
             $castedId = (int) $id;
 
-            if (PHP_VERSION_ID >= 80400
-                && ($prop->isProtectedSet() || $prop->isPrivateSet())) {
+            if ($prop->isProtectedSet() || $prop->isPrivateSet()) {
                 $prop->setRawValueWithoutLazyInitialization($this, $castedId);
             } else {
                 $this->{$pk} = $castedId;

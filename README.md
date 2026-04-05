@@ -2,7 +2,7 @@
 [![Total Downloads](https://poser.pugx.org/coagus/php-api-builder/downloads)](https://packagist.org/packages/coagus/php-api-builder)
 [![License](https://poser.pugx.org/coagus/php-api-builder/license)](https://packagist.org/packages/coagus/php-api-builder)
 [![Tests](https://github.com/coagus/php-api-builder/actions/workflows/release.yml/badge.svg)](https://github.com/coagus/php-api-builder/actions)
-[![PHP 8.3+](https://img.shields.io/badge/php-8.3%2B-blue.svg)](https://www.php.net/)
+[![PHP 8.4+](https://img.shields.io/badge/php-8.4%2B-blue.svg)](https://www.php.net/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg)](https://hub.docker.com/r/coagus/php-api-builder)
 
 # PHP API Builder v2
@@ -347,7 +347,7 @@ my-api/
 
 ## Requirements
 
-- PHP 8.3+ (8.4 recommended for property hooks)
+- PHP 8.4+
 - Composer 2.x
 - Or just Docker
 
