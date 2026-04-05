@@ -1,7 +1,6 @@
 {
     "name": "coagus/php-api-builder",
     "description": "Build RESTful APIs in PHP in minutes. Define entities, get automatic CRUD, JWT auth, validation, and OpenAPI docs.",
-    "version": "2.0.0-alpha.1",
     "type": "library",
     "license": "MIT",
     "homepage": "https://github.com/coagus/php-api-builder",
