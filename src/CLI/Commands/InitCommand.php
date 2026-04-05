@@ -308,7 +308,7 @@ docker_running() {
     docker compose ps --status running 2>/dev/null | grep -q "app"
 }
 
-if php_available; then
+if php_available && [ -f vendor/bin/api ]; then
     php vendor/bin/api "$@"
 elif docker_running; then
     docker compose exec app php vendor/bin/api "$@"
