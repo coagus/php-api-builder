@@ -143,6 +143,7 @@ class API
         }
 
         $specBuilder = new SpecBuilder($this->namespace, '1.0.0', $this->apiPrefix);
+        $this->discoverEntities($specBuilder);
         $handler = new DocsController($specBuilder);
         $handler->setRequest($request);
 
@@ -151,6 +152,30 @@ class API
         $handler->get();
 
         return $handler->getResponse();
+    }
+
+    private function discoverEntities(SpecBuilder $specBuilder): void
+    {
+        $entitiesNamespace = $this->namespace . '\\Entities\\';
+
+        // Find entity directory from PSR-4 autoload
+        $autoloadPaths = [
+            getcwd() . '/entities',
+            getcwd() . '/src/Entities',
+        ];
+
+        foreach ($autoloadPaths as $dir) {
+            if (!is_dir($dir)) {
+                continue;
+            }
+
+            foreach (glob("{$dir}/*.php") as $file) {
+                $className = $entitiesNamespace . pathinfo($file, PATHINFO_FILENAME);
+                if (class_exists($className) && is_subclass_of($className, Entity::class)) {
+                    $specBuilder->addEntity($className);
+                }
+            }
+        }
     }
 
     private function generateRequestId(): string
