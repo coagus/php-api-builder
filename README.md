@@ -54,6 +54,7 @@ That's it. You now have a fully functional API with `GET`, `POST`, `PUT`, `PATCH
 - **Auto-generated OpenAPI/Swagger** documentation from your entity attributes
 - **Validation via attributes** (`#[Required]`, `#[Email]`, `#[MaxLength]`, `#[Unique]`) -- no config files
 - **Rate limiting** middleware with file-based storage -- no external dependencies
+- **REST conventions** -- lowerCamelCase JSON keys, snake_case query params, RFC 7807 errors
 - **Security built-in** with OWASP headers, CORS, input sanitization, SQL injection protection
 - **Docker-first** workflow -- start a project without PHP installed locally
 - **CLI scaffolding** for entities, services, middleware, and tests

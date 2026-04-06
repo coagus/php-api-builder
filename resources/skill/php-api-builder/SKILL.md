@@ -246,10 +246,12 @@ APIDB auto-wraps responses: GET list returns paginated format, GET by ID returns
 
 ## JSON Response Formats
 
+All JSON keys use **lowerCamelCase** (`userId`, `createdAt`, `totalPages`). URL query parameters use **snake_case** (`?per_page=20&sort_by=name`). The `fill()` method accepts both formats as input.
+
 ### Success (single)
 ```json
 {
-    "data": { "id": 1, "name": "Carlos", "email": "carlos@test.com" }
+    "data": { "id": 1, "name": "Carlos", "email": "carlos@test.com", "roleId": 2, "createdAt": "2026-01-15 10:30:00" }
 }
 ```
 
