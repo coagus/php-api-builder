@@ -324,10 +324,10 @@ class SpecBuilder
             'PaginationMeta' => [
                 'type' => 'object',
                 'properties' => [
-                    'current_page' => ['type' => 'integer'],
-                    'per_page' => ['type' => 'integer'],
+                    'currentPage' => ['type' => 'integer'],
+                    'perPage' => ['type' => 'integer'],
                     'total' => ['type' => 'integer'],
-                    'total_pages' => ['type' => 'integer'],
+                    'totalPages' => ['type' => 'integer'],
                 ],
             ],
         ];

@@ -44,7 +44,7 @@ test('toArray excludes Hidden fields', function () {
         ->and($array)->not->toHaveKey('password');
 });
 
-test('toArray converts camelCase to snake_case', function () {
+test('toArray uses camelCase keys', function () {
     $user = new TestUser();
     $user->id = 1;
     $user->name = 'Carlos';
@@ -54,6 +54,6 @@ test('toArray converts camelCase to snake_case', function () {
 
     $array = $user->toArray();
 
-    expect($array)->toHaveKey('role_id')
-        ->and($array)->not->toHaveKey('roleId');
+    expect($array)->toHaveKey('roleId')
+        ->and($array)->not->toHaveKey('role_id');
 });

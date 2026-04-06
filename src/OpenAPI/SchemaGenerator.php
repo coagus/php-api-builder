@@ -42,7 +42,7 @@ class SchemaGenerator
                 continue;
             }
 
-            $name = Utils::camelToSnake($prop->getName());
+            $name = $prop->getName();
             $schema = self::propertyToSchema($prop);
 
             if (!empty($prop->getAttributes(Required::class))) {
@@ -91,9 +91,9 @@ class SchemaGenerator
                 continue;
             }
 
-            // BelongsTo FK fields (user_id, post_id) SHOULD be included
+            // BelongsTo FK fields (userId, postId) SHOULD be included
 
-            $name = Utils::camelToSnake($prop->getName());
+            $name = $prop->getName();
             $schema = self::propertyToSchema($prop, false);
 
             if (!empty($prop->getAttributes(Required::class))) {

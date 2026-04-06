@@ -175,10 +175,10 @@ abstract class Entity
             // BelongsTo: always include FK value, optionally include loaded relation
             if (!empty($prop->getAttributes(BelongsTo::class))) {
                 if (is_scalar($value)) {
-                    $result[Utils::camelToSnake($name)] = $value;
+                    $result[$name] = $value;
                 }
                 if (in_array($name, $this->loadedRelations, true) && $value instanceof Entity) {
-                    $result[Utils::camelToSnake($name)] = $value->toArray();
+                    $result[$name] = $value->toArray();
                 }
                 continue;
             }
@@ -187,12 +187,12 @@ abstract class Entity
             if (!empty($prop->getAttributes(HasMany::class))
                 || !empty($prop->getAttributes(BelongsToMany::class))) {
                 if (in_array($name, $this->loadedRelations, true) && is_array($value)) {
-                    $result[Utils::camelToSnake($name)] = array_map(fn(Entity $e) => $e->toArray(), $value);
+                    $result[$name] = array_map(fn(Entity $e) => $e->toArray(), $value);
                 }
                 continue;
             }
 
-            $result[Utils::camelToSnake($name)] = $value;
+            $result[$name] = $value;
         }
 
         return $result;
@@ -390,11 +390,18 @@ abstract class Entity
             if (!$prop->isInitialized($this)) {
                 continue;
             }
-            // Skip relation properties
-            if (!empty($prop->getAttributes(BelongsTo::class))
-                || !empty($prop->getAttributes(HasMany::class))
+            // Skip collection relation properties (not DB columns)
+            if (!empty($prop->getAttributes(HasMany::class))
                 || !empty($prop->getAttributes(BelongsToMany::class))) {
                 continue;
+            }
+
+            // BelongsTo: only include scalar FK values, skip loaded relation objects
+            if (!empty($prop->getAttributes(BelongsTo::class))) {
+                $value = $prop->getValue($this);
+                if (!is_scalar($value)) {
+                    continue;
+                }
             }
 
             $value = $prop->getValue($this);

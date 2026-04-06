@@ -46,10 +46,10 @@ test('GET list returns data, meta format', function () {
     expect($response->getStatusCode())->toBe(200)
         ->and($body)->toHaveKey('data')
         ->and($body)->toHaveKey('meta')
-        ->and($body['meta'])->toHaveKey('current_page')
-        ->and($body['meta'])->toHaveKey('per_page')
+        ->and($body['meta'])->toHaveKey('currentPage')
+        ->and($body['meta'])->toHaveKey('perPage')
         ->and($body['meta'])->toHaveKey('total')
-        ->and($body['meta'])->toHaveKey('total_pages');
+        ->and($body['meta'])->toHaveKey('totalPages');
 });
 
 test('GET list with pagination', function () {
@@ -58,10 +58,10 @@ test('GET list with pagination', function () {
     $body = $handler->getResponse()->getBody();
 
     expect($body['data'])->toHaveCount(2)
-        ->and($body['meta']['current_page'])->toBe(2)
-        ->and($body['meta']['per_page'])->toBe(2)
+        ->and($body['meta']['currentPage'])->toBe(2)
+        ->and($body['meta']['perPage'])->toBe(2)
         ->and($body['meta']['total'])->toBe(5)
-        ->and($body['meta']['total_pages'])->toBe(3);
+        ->and($body['meta']['totalPages'])->toBe(3);
 });
 
 test('GET list with sorting', function () {

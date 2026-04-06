@@ -179,10 +179,10 @@ class QueryBuilder
         return [
             'data' => $data,
             'meta' => [
-                'current_page' => $page,
-                'per_page' => $perPage,
+                'currentPage' => $page,
+                'perPage' => $perPage,
                 'total' => $total,
-                'total_pages' => $totalPages,
+                'totalPages' => $totalPages,
             ],
         ];
     }

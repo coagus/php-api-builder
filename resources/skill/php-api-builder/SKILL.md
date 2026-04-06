@@ -258,10 +258,10 @@ APIDB auto-wraps responses: GET list returns paginated format, GET by ID returns
 {
     "data": [...],
     "meta": {
-        "current_page": 1,
-        "per_page": 20,
+        "currentPage": 1,
+        "perPage": 20,
         "total": 150,
-        "total_pages": 8
+        "totalPages": 8
     }
 }
 ```

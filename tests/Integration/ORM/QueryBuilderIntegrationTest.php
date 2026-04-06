@@ -75,17 +75,17 @@ test('paginate returns data and meta', function () {
     expect($result)->toHaveKey('data')
         ->and($result)->toHaveKey('meta')
         ->and($result['data'])->toHaveCount(2)
-        ->and($result['meta']['current_page'])->toBe(1)
-        ->and($result['meta']['per_page'])->toBe(2)
+        ->and($result['meta']['currentPage'])->toBe(1)
+        ->and($result['meta']['perPage'])->toBe(2)
         ->and($result['meta']['total'])->toBe(3)
-        ->and($result['meta']['total_pages'])->toBe(2);
+        ->and($result['meta']['totalPages'])->toBe(2);
 });
 
 test('paginate second page returns remaining items', function () {
     $result = TestUser::query()->paginate(page: 2, perPage: 2);
 
     expect($result['data'])->toHaveCount(1)
-        ->and($result['meta']['current_page'])->toBe(2);
+        ->and($result['meta']['currentPage'])->toBe(2);
 });
 
 test('soft deleted records are excluded from query builder', function () {
