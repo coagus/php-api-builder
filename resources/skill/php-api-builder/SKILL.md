@@ -28,7 +28,8 @@ Both inherit from `Resource`, which provides response methods and request helper
 | `#[Unique]` | Property | Ensures uniqueness in DB |
 | `#[MaxLength(n)]` | Property | Maximum string length |
 | `#[MinLength(n)]` | Property | Minimum string length |
-| `#[Hidden]` | Property | Excluded from JSON output (e.g., passwords) |
+| `#[Hidden]` | Property | Excluded from JSON output and create schema (e.g., passwords) |
+| `#[IsReadOnly]` | Property | Excluded from create/update schema (auto-generated fields like timestamps, slugs) |
 | `#[SoftDelete]` | Class | Enables soft delete (deleted_at column) |
 | `#[BelongsTo(Class)]` | Property | Many-to-one relationship |
 | `#[HasMany(Class)]` | Property | One-to-many relationship |
@@ -48,7 +49,7 @@ namespace App\Entities;
 
 use Coagus\PhpApiBuilder\ORM\Entity;
 use Coagus\PhpApiBuilder\Attributes\{Table, PrimaryKey, SoftDelete};
-use Coagus\PhpApiBuilder\Validation\Attributes\{Required, Email, MaxLength, MinLength, Unique, Hidden};
+use Coagus\PhpApiBuilder\Validation\Attributes\{Required, Email, MaxLength, MinLength, Unique, Hidden, IsReadOnly};
 use Coagus\PhpApiBuilder\Attributes\{BelongsTo, HasMany};
 
 #[Table('products')]
@@ -77,10 +78,13 @@ class Product extends Entity
     public bool $active = true;                 // default value
 
     #[BelongsTo(Category::class)]
-    public int $categoryId;
+    public int $categoryId;                     // FK — included in responses AND create schema
 
     #[HasMany(Review::class)]
-    public array $reviews;                      // loaded via eager loading
+    public array $reviews;                      // loaded via eager loading, not a DB column
+
+    #[IsReadOnly]
+    public string $createdAt;                   // excluded from create schema, set by beforeCreate()
 }
 ```
 
@@ -88,6 +92,9 @@ Key points to explain to the developer:
 - `public private(set)` on `$id` means anyone can read it but only the entity itself (via DB) can set it
 - Property hooks (`set =>`) run automatically on assignment - use for sanitization and validation
 - `#[SoftDelete]` adds a `deleted_at` column; `delete()` sets it instead of removing the row
+- `#[IsReadOnly]` marks fields that are auto-generated (timestamps, slugs) — they appear in GET responses but not in POST/PUT schemas in Swagger
+- `#[Hidden]` completely excludes fields from all JSON output (responses and schemas) — use for passwords
+- `#[BelongsTo]` FK properties (like `$categoryId`) are always included in responses and create schemas — they are the foreign key the user sends
 - Relationship properties (`$reviews`) are not DB columns; they're populated via eager loading with `->with('reviews')`
 - Default values (like `$active = true`) are used when the field is not provided
 
