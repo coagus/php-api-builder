@@ -10,9 +10,11 @@ use Coagus\PhpApiBuilder\Attributes\Example;
 use Coagus\PhpApiBuilder\Attributes\HasMany;
 use Coagus\PhpApiBuilder\Attributes\PrimaryKey;
 use Coagus\PhpApiBuilder\Helpers\Utils;
+use Coagus\PhpApiBuilder\Validation\Attributes\DefaultValue;
 use Coagus\PhpApiBuilder\Validation\Attributes\Email;
 use Coagus\PhpApiBuilder\Validation\Attributes\Hidden;
 use Coagus\PhpApiBuilder\Validation\Attributes\In;
+use Coagus\PhpApiBuilder\Validation\Attributes\IsReadOnly;
 use Coagus\PhpApiBuilder\Validation\Attributes\Max;
 use Coagus\PhpApiBuilder\Validation\Attributes\MaxLength;
 use Coagus\PhpApiBuilder\Validation\Attributes\Min;
@@ -74,11 +76,22 @@ class SchemaGenerator
                 continue;
             }
 
-            // Skip relation properties
-            if (!empty($prop->getAttributes(HasMany::class))
-                || !empty($prop->getAttributes(BelongsTo::class))) {
+            // Skip collection relations (HasMany)
+            if (!empty($prop->getAttributes(HasMany::class))) {
                 continue;
             }
+
+            // Skip read-only fields (auto-generated: created_at, updated_at, etc.)
+            if (!empty($prop->getAttributes(IsReadOnly::class))) {
+                continue;
+            }
+
+            // Skip Hidden fields
+            if (!empty($prop->getAttributes(Hidden::class))) {
+                continue;
+            }
+
+            // BelongsTo FK fields (user_id, post_id) SHOULD be included
 
             $name = Utils::camelToSnake($prop->getName());
             $schema = self::propertyToSchema($prop, false);

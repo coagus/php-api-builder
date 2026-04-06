@@ -172,16 +172,22 @@ abstract class Entity
 
             $value = $prop->getValue($this);
 
-            // Include loaded relations as nested arrays
-            if (!empty($prop->getAttributes(BelongsTo::class))
-                || !empty($prop->getAttributes(HasMany::class))
+            // BelongsTo: always include FK value, optionally include loaded relation
+            if (!empty($prop->getAttributes(BelongsTo::class))) {
+                if (is_scalar($value)) {
+                    $result[Utils::camelToSnake($name)] = $value;
+                }
+                if (in_array($name, $this->loadedRelations, true) && $value instanceof Entity) {
+                    $result[Utils::camelToSnake($name)] = $value->toArray();
+                }
+                continue;
+            }
+
+            // HasMany/BelongsToMany: only include if loaded
+            if (!empty($prop->getAttributes(HasMany::class))
                 || !empty($prop->getAttributes(BelongsToMany::class))) {
-                if (in_array($name, $this->loadedRelations, true)) {
-                    if ($value instanceof Entity) {
-                        $result[Utils::camelToSnake($name)] = $value->toArray();
-                    } elseif (is_array($value)) {
-                        $result[Utils::camelToSnake($name)] = array_map(fn(Entity $e) => $e->toArray(), $value);
-                    }
+                if (in_array($name, $this->loadedRelations, true) && is_array($value)) {
+                    $result[Utils::camelToSnake($name)] = array_map(fn(Entity $e) => $e->toArray(), $value);
                 }
                 continue;
             }

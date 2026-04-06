@@ -7,7 +7,7 @@ namespace App\Entities;
 use Coagus\PhpApiBuilder\ORM\Entity;
 use Coagus\PhpApiBuilder\ORM\QueryBuilder;
 use Coagus\PhpApiBuilder\Attributes\{Table, PrimaryKey, HasMany};
-use Coagus\PhpApiBuilder\Validation\Attributes\{Required, Email, Unique, MaxLength, MinLength, Hidden};
+use Coagus\PhpApiBuilder\Validation\Attributes\{Required, Email, Unique, MaxLength, MinLength, Hidden, IsReadOnly};
 
 #[Table('users')]
 class User extends Entity
@@ -30,6 +30,7 @@ class User extends Entity
 
     public bool $active = true;
 
+    #[IsReadOnly]
     public string $createdAt;
 
     #[HasMany(Post::class)]

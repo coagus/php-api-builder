@@ -6,7 +6,7 @@ namespace App\Entities;
 
 use Coagus\PhpApiBuilder\ORM\Entity;
 use Coagus\PhpApiBuilder\Attributes\{Table, PrimaryKey, BelongsTo};
-use Coagus\PhpApiBuilder\Validation\Attributes\{Required, MaxLength};
+use Coagus\PhpApiBuilder\Validation\Attributes\{Required, MaxLength, IsReadOnly};
 
 #[Table('comments')]
 class Comment extends Entity
@@ -23,6 +23,7 @@ class Comment extends Entity
     #[BelongsTo(User::class)]
     public int $userId;
 
+    #[IsReadOnly]
     public string $createdAt;
 
     protected function beforeCreate(): void

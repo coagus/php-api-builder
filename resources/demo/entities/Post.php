@@ -6,7 +6,7 @@ namespace App\Entities;
 
 use Coagus\PhpApiBuilder\ORM\Entity;
 use Coagus\PhpApiBuilder\Attributes\{Table, PrimaryKey, SoftDelete, BelongsTo, HasMany, BelongsToMany, Description, Example};
-use Coagus\PhpApiBuilder\Validation\Attributes\{Required, MaxLength, DefaultValue, In};
+use Coagus\PhpApiBuilder\Validation\Attributes\{Required, MaxLength, DefaultValue, In, IsReadOnly};
 
 #[Table('posts')]
 #[SoftDelete]
@@ -22,7 +22,7 @@ class Post extends Entity
         set => trim($value);
     }
 
-    #[MaxLength(200)]
+    #[IsReadOnly, MaxLength(200)]
     public string $slug;
 
     #[Required]
@@ -37,7 +37,10 @@ class Post extends Entity
     #[BelongsTo(User::class)]
     public int $userId;
 
+    #[IsReadOnly]
     public string $createdAt;
+
+    #[IsReadOnly]
     public string $updatedAt;
 
     #[HasMany(Comment::class)]
