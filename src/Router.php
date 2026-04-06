@@ -106,6 +106,14 @@ class Router
             return $httpMethod;
         }
 
+        // Entity classes get wrapped in APIDB which provides all CRUD methods
+        if (is_subclass_of($class, Entity::class)) {
+            $crudMethods = ['get', 'post', 'put', 'patch', 'delete'];
+            if (in_array($httpMethod, $crudMethods, true)) {
+                return $httpMethod;
+            }
+        }
+
         return null;
     }
 
