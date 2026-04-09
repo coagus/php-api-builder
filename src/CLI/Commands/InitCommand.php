@@ -27,8 +27,15 @@ class InitCommand implements CommandInterface
         echo "  Next steps:\n";
         echo "    1. Edit .env with your database credentials\n";
         echo "    2. docker compose up -d\n";
-        echo "    3. ./api make:entity YourEntity\n";
-        echo "    4. Open http://localhost:8080/api/v1/health\n\n";
+        echo "    3. Open http://localhost:8080/api/v1/health\n";
+        echo "    4. Try a demo with: ./api demo:install\n";
+        echo "       - Open Swagger UI: http://localhost:8080/api/v1/docs/swagger\n";
+        echo "       - Go to Auth > POST /auth/login and execute with:\n";
+        echo "         {\"email\": \"admin@demo.com\", \"password\": \"password\"}\n";
+        echo "       - Copy the token, click the Authorize button and paste it in Value\n";
+        echo "       - Now you can test all protected endpoints\n";
+        echo "    5. Uninstall the demo with: ./api demo:remove\n";
+        echo "    6. Explore more options with: ./api --help\n\n";
 
         return 0;
     }
