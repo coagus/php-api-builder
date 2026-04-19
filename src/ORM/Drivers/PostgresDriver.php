@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Coagus\PhpApiBuilder\ORM\Drivers;
 
+use PDO;
+
 class PostgresDriver implements DriverInterface
 {
     public function getDsn(array $config): string
@@ -50,5 +52,31 @@ class PostgresDriver implements DriverInterface
     public function supportsReturning(): bool
     {
         return true;
+    }
+
+    public function getCurrentTimestampExpression(): string
+    {
+        return 'CURRENT_TIMESTAMP';
+    }
+
+    public function applySessionSettings(PDO $pdo): void
+    {
+        $pdo->exec("SET TIME ZONE 'UTC'");
+        $pdo->exec("SET client_encoding = 'UTF8'");
+    }
+
+    public function getRefreshTokenTableDdl(): string
+    {
+        return <<<'SQL'
+            CREATE TABLE IF NOT EXISTS refresh_tokens (
+                id VARCHAR(64) PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                token_hash VARCHAR(128) NOT NULL,
+                family_id VARCHAR(64) NOT NULL,
+                expires_at TIMESTAMPTZ NOT NULL,
+                revoked SMALLINT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            SQL;
     }
 }
