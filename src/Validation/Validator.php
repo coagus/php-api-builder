@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Coagus\PhpApiBuilder\Validation;
 
+use Coagus\PhpApiBuilder\Attributes\Ignore;
 use Coagus\PhpApiBuilder\ORM\Entity;
 use Coagus\PhpApiBuilder\Validation\Attributes\DefaultValue;
 use Coagus\PhpApiBuilder\Validation\Attributes\Email;
@@ -25,6 +26,9 @@ class Validator
         $errors = [];
 
         foreach ($ref->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
+            if (!empty($prop->getAttributes(Ignore::class))) {
+                continue;
+            }
             $fieldErrors = self::validateProperty($prop, $entity);
             if (!empty($fieldErrors)) {
                 $errors[$prop->getName()] = $fieldErrors;

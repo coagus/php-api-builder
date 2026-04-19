@@ -7,6 +7,7 @@ namespace Coagus\PhpApiBuilder\ORM;
 use Coagus\PhpApiBuilder\Attributes\BelongsTo;
 use Coagus\PhpApiBuilder\Attributes\BelongsToMany;
 use Coagus\PhpApiBuilder\Attributes\HasMany;
+use Coagus\PhpApiBuilder\Attributes\Ignore;
 use Coagus\PhpApiBuilder\Attributes\PrimaryKey;
 use Coagus\PhpApiBuilder\Attributes\SoftDelete;
 use Coagus\PhpApiBuilder\Attributes\Table;
@@ -147,7 +148,7 @@ abstract class Entity
             $camelKey = Utils::snakeToCamel($key);
             if ($ref->hasProperty($camelKey)) {
                 $prop = $ref->getProperty($camelKey);
-                if ($prop->isPublic()) {
+                if ($prop->isPublic() && !self::isIgnored($prop)) {
                     $this->{$camelKey} = $this->castValue($prop, $value);
                 }
             }
@@ -162,6 +163,10 @@ abstract class Entity
         $result = [];
 
         foreach ($ref->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
+            if (self::isIgnored($prop)) {
+                continue;
+            }
+
             if (!empty($prop->getAttributes(Hidden::class))) {
                 continue;
             }
@@ -212,7 +217,7 @@ abstract class Entity
         if (!empty($belongsToAttrs)) {
             $attr = $belongsToAttrs[0]->newInstance();
             $relatedClass = $attr->entity;
-            $fk = $attr->foreignKey ?? Utils::camelToSnake($relationName) . '_id';
+            $fk = $attr->foreignKey ?? Utils::foreignKeyColumn($relationName);
             $fkCamel = Utils::snakeToCamel($fk);
             if (isset($this->{$fkCamel})) {
                 $this->{$relationName} = $relatedClass::find($this->{$fkCamel});
@@ -225,7 +230,7 @@ abstract class Entity
         if (!empty($hasManyAttrs)) {
             $attr = $hasManyAttrs[0]->newInstance();
             $relatedClass = $attr->entity;
-            $fk = $attr->foreignKey ?? Utils::camelToSnake((new ReflectionClass(static::class))->getShortName()) . '_id';
+            $fk = $attr->foreignKey ?? Utils::foreignKeyColumn((new ReflectionClass(static::class))->getShortName());
             $fkCamel = Utils::snakeToCamel($fk);
             $this->{$relationName} = $relatedClass::query()->where($fkCamel, $this->{static::getPrimaryKeyField()})->get();
             $this->loadedRelations[] = $relationName;
@@ -307,7 +312,7 @@ abstract class Entity
             $camelName = Utils::snakeToCamel($column);
             if ($ref->hasProperty($camelName)) {
                 $prop = $ref->getProperty($camelName);
-                if ($prop->isPublic()) {
+                if ($prop->isPublic() && !self::isIgnored($prop)) {
                     if ($value === null && $prop->getType() && !$prop->getType()->allowsNull()) {
                         continue;
                     }
@@ -386,6 +391,9 @@ abstract class Entity
         foreach ($ref->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
             $name = $prop->getName();
             if ($name === $excludePk) {
+                continue;
+            }
+            if (self::isIgnored($prop)) {
                 continue;
             }
             if (!$prop->isInitialized($this)) {
@@ -484,5 +492,14 @@ abstract class Entity
     public static function clearMetadataCache(): void
     {
         self::$metadataCache = [];
+    }
+
+    /**
+     * True when a property is marked `#[Ignore]` and should be invisible to
+     * the ORM, validator, and schema generator.
+     */
+    public static function isIgnored(ReflectionProperty $prop): bool
+    {
+        return !empty($prop->getAttributes(Ignore::class));
     }
 }

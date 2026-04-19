@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Coagus\PhpApiBuilder\ORM;
 
+use Coagus\PhpApiBuilder\Attributes\Ignore;
 use Coagus\PhpApiBuilder\Helpers\Utils;
 use InvalidArgumentException;
 use ReflectionClass;
@@ -322,6 +323,9 @@ class QueryBuilder
         $ref = new ReflectionClass($this->entityClass);
         $columns = [];
         foreach ($ref->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
+            if (!empty($prop->getAttributes(Ignore::class))) {
+                continue;
+            }
             $columns[] = Utils::camelToSnake($prop->getName());
         }
 
@@ -394,7 +398,7 @@ class QueryBuilder
     private function eagerLoadBelongsTo(array $entities, string $relationName, array $meta): void
     {
         $relatedClass = $meta['entity'];
-        $fk = $meta['foreignKey'] ?? Utils::camelToSnake($relationName) . '_id';
+        $fk = $meta['foreignKey'] ?? Utils::foreignKeyColumn($relationName);
         $fkCamel = Utils::snakeToCamel($fk);
 
         $ids = array_unique(array_filter(array_map(
@@ -433,7 +437,7 @@ class QueryBuilder
         $relatedClass = $meta['entity'];
         $entityClass = $this->entityClass;
         $pk = $entityClass::getPrimaryKeyField();
-        $fk = $meta['foreignKey'] ?? Utils::camelToSnake((new \ReflectionClass($entityClass))->getShortName()) . '_id';
+        $fk = $meta['foreignKey'] ?? Utils::foreignKeyColumn((new \ReflectionClass($entityClass))->getShortName());
 
         $ids = array_map(fn($e) => $e->{$pk}, $entities);
 

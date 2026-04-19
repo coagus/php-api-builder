@@ -8,6 +8,7 @@ use Coagus\PhpApiBuilder\Attributes\BelongsTo;
 use Coagus\PhpApiBuilder\Attributes\Description;
 use Coagus\PhpApiBuilder\Attributes\Example;
 use Coagus\PhpApiBuilder\Attributes\HasMany;
+use Coagus\PhpApiBuilder\Attributes\Ignore;
 use Coagus\PhpApiBuilder\Attributes\PrimaryKey;
 use Coagus\PhpApiBuilder\Helpers\Utils;
 use Coagus\PhpApiBuilder\Validation\Attributes\DefaultValue;
@@ -33,6 +34,10 @@ class SchemaGenerator
         $required = [];
 
         foreach ($ref->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
+            if (!empty($prop->getAttributes(Ignore::class))) {
+                continue;
+            }
+
             if (!empty($prop->getAttributes(Hidden::class))) {
                 continue;
             }
@@ -71,6 +76,10 @@ class SchemaGenerator
         $required = [];
 
         foreach ($ref->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
+            if (!empty($prop->getAttributes(Ignore::class))) {
+                continue;
+            }
+
             // Skip primary key for create
             if (!empty($prop->getAttributes(PrimaryKey::class))) {
                 continue;
