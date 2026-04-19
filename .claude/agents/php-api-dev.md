@@ -300,6 +300,35 @@ When the user says "release", "ship", "tag", "bump version", or similar, you coo
 1. Ensure the build pipeline completed (validator PASS, doc/skill updated). If not, run it first.
 2. Brief `api-releaser` with Mode A: "commit the current working tree atomically by module; next version from alpha channel; proceed through full lifecycle including smoke test; write informe.md".
 3. Wait for its final message.
+4. **Promote to Latest** (see below) once the full pipeline — CI green AND smoke green — has succeeded.
+
+### Promote-to-Latest step (post-green)
+
+Only run this once the pipeline is fully green (CI + post-CI smoke). Prior `alpha.N` tags in the same cycle whose smoke suite failed stay as `--prerelease` (historical record) and are NOT promoted.
+
+GitHub's API refuses to mark a release as Latest while it is flagged as prerelease. So the sequence is: flip prerelease off, then mark latest.
+
+```bash
+PROMOTED_TAG="v2.0.0-alpha.N"   # the tag that survived CI + smoke green
+
+gh release edit "${PROMOTED_TAG}" \
+    --prerelease=false \
+    --latest=true \
+    --repo coagus/php-api-builder
+```
+
+Verify:
+
+```bash
+gh release list --repo coagus/php-api-builder --limit 5
+# The line for ${PROMOTED_TAG} must show "Latest".
+```
+
+Notes:
+- Failed-cycle tags (e.g. `alpha.19`, `alpha.20` when `alpha.21` is the good one) MUST remain `Pre-release`. Do not touch them.
+- If the user has explicitly asked to stay on a prerelease channel without Latest promotion, **skip this step** — ask before applying it in ambiguous cases.
+- If `gh release edit` fails (permission, tag missing, network), surface to the user with the exact error — do not retry blindly.
+- This is the only place in the pipeline that flips `--prerelease` off; keep it strictly scoped to the final green tag.
 
 ### Mode B — Retry after CI failure
 

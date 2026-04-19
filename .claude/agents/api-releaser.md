@@ -410,6 +410,28 @@ rm -rf "${SMOKE_DIR}"
 
 If any test failed, KEEP `${SMOKE_DIR}` intact for debugging and record its path in the report. Still bring containers down (`docker compose down -v`) to free ports, but don't rm the directory.
 
+## Phase 7.5 — Promote to Latest (only on full green)
+
+Only execute when CI was green AND every smoke test passed. If anything failed, skip this phase; the tag stays flagged as prerelease so history reflects the failed attempt.
+
+```bash
+gh release edit "${NEXT_VERSION}" \
+    --prerelease=false \
+    --latest=true \
+    --repo coagus/php-api-builder
+```
+
+Verification:
+
+```bash
+gh release list --repo coagus/php-api-builder --limit 5
+# Expect the line for ${NEXT_VERSION} to show "Latest".
+```
+
+Never promote an older tag in the same cycle (e.g., if `alpha.19` and `alpha.20` failed smoke and `alpha.21` passed, only `alpha.21` gets promoted). Failed tags stay as `Pre-release` on purpose — they are the release history.
+
+If `gh release edit` errors (422, 403, etc.), include the error verbatim in `informe.md` Phase 8 under "Notes" and in the final message to the orchestrator. Do not retry blindly.
+
 ## Phase 8 — Generate informe.md
 
 Write to the REPO root (not the smoke dir) — `/sessions/.../php-api-builder/informe.md` or wherever the orchestrator specifies. Structure:
