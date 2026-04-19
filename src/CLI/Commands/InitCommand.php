@@ -78,9 +78,12 @@ JWT_ISSUER=my-api
 JWT_AUDIENCE=my-api
 
 # CORS
-CORS_ALLOWED_ORIGINS=*
+# Comma-separated list of allowed origins. Wildcard ("*") is only allowed when
+# CORS_ALLOW_CREDENTIALS=false; production deployments MUST set an explicit list.
+CORS_ALLOWED_ORIGINS=http://localhost:8080
 CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
 CORS_ALLOWED_HEADERS=Content-Type,Authorization,X-Request-ID
+CORS_ALLOW_CREDENTIALS=false
 
 # App
 APP_PORT=8080

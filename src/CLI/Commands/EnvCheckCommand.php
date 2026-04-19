@@ -13,10 +13,10 @@ class EnvCheckCommand implements CommandInterface
 
         $allOk = true;
 
-        // PHP version
+        // PHP version — composer.json requires ^8.4; enforce the same here.
         $phpVersion = PHP_VERSION;
-        $phpOk = version_compare($phpVersion, '8.3.0', '>=');
-        $this->printCheck("PHP >= 8.3", $phpOk, $phpVersion);
+        $phpOk = version_compare($phpVersion, '8.4.0', '>=');
+        $this->printCheck("PHP >= 8.4", $phpOk, $phpVersion);
         $allOk = $allOk && $phpOk;
 
         // Extensions
