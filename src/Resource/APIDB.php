@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Coagus\PhpApiBuilder\Resource;
 
+use Coagus\PhpApiBuilder\Exceptions\ValidationException;
 use Coagus\PhpApiBuilder\Helpers\Utils;
 use Coagus\PhpApiBuilder\ORM\Entity;
 use Coagus\PhpApiBuilder\ORM\QueryBuilder;
-use RuntimeException;
 
 abstract class APIDB extends Resource
 {
@@ -28,13 +28,9 @@ abstract class APIDB extends Resource
 
         try {
             $entity->save();
-        } catch (RuntimeException $e) {
-            $errors = json_decode($e->getMessage(), true);
-            if (is_array($errors)) {
-                $this->error('Validation Error', 422, 'One or more fields failed validation.', $errors);
-                return;
-            }
-            throw $e;
+        } catch (ValidationException $e) {
+            $this->error('Validation Error', 422, 'One or more fields failed validation.', $e->errors);
+            return;
         }
 
         $this->created($entity);
@@ -60,13 +56,9 @@ abstract class APIDB extends Resource
 
         try {
             $existing->save();
-        } catch (RuntimeException $e) {
-            $errors = json_decode($e->getMessage(), true);
-            if (is_array($errors)) {
-                $this->error('Validation Error', 422, 'One or more fields failed validation.', $errors);
-                return;
-            }
-            throw $e;
+        } catch (ValidationException $e) {
+            $this->error('Validation Error', 422, 'One or more fields failed validation.', $e->errors);
+            return;
         }
 
         $this->success($existing);
@@ -92,13 +84,9 @@ abstract class APIDB extends Resource
 
         try {
             $existing->save();
-        } catch (RuntimeException $e) {
-            $errors = json_decode($e->getMessage(), true);
-            if (is_array($errors)) {
-                $this->error('Validation Error', 422, 'One or more fields failed validation.', $errors);
-                return;
-            }
-            throw $e;
+        } catch (ValidationException $e) {
+            $this->error('Validation Error', 422, 'One or more fields failed validation.', $e->errors);
+            return;
         }
 
         $this->success($existing);
@@ -199,14 +187,27 @@ abstract class APIDB extends Resource
             return;
         }
 
-        $fields = explode(',', $sort);
-        foreach ($fields as $field) {
-            $field = trim($field);
-            if (str_starts_with($field, '-')) {
-                $query->orderBy(Utils::snakeToCamel(substr($field, 1)), 'desc');
-            } else {
-                $query->orderBy(Utils::snakeToCamel($field), 'asc');
+        $allowlist = $query->getColumnAllowlist();
+
+        foreach (explode(',', $sort) as $rawField) {
+            $field = trim($rawField);
+            if ($field === '') {
+                continue;
             }
+
+            $direction = 'asc';
+            if (str_starts_with($field, '-')) {
+                $direction = 'desc';
+                $field = substr($field, 1);
+            }
+
+            $column = Utils::camelToSnake($field);
+            if (!in_array($column, $allowlist, true)) {
+                // Silently drop unknown sort fields — never interpolate into SQL.
+                continue;
+            }
+
+            $query->orderBy(Utils::snakeToCamel($column), $direction);
         }
     }
 
@@ -217,8 +218,23 @@ abstract class APIDB extends Resource
             return;
         }
 
-        $fieldList = array_map('trim', explode(',', $fields));
-        $query->select(...$fieldList);
+        $allowlist = $query->getColumnAllowlist();
+        $requested = array_map('trim', explode(',', $fields));
+        $safe = [];
+
+        foreach ($requested as $field) {
+            if ($field === '') {
+                continue;
+            }
+            $column = Utils::camelToSnake($field);
+            if (in_array($column, $allowlist, true)) {
+                $safe[] = $field;
+            }
+        }
+
+        if (!empty($safe)) {
+            $query->select(...$safe);
+        }
     }
 
     private function successWithMeta(mixed $data, int $code, array $meta): void
