@@ -1,6 +1,6 @@
 ---
 name: php-api-builder
-description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). This skill knows every pattern, attribute, and convention of the library."
+description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). Trigger on: validation exception, entity not found exception, driver portability, RFC 7807 problem json, column allowlist, trusted proxies, CORS credentials, application/problem+json, ValidationException, EntityNotFoundException. This skill knows every pattern, attribute, and convention of the library."
 ---
 
 # PHP API Builder v2 - Development Skill
@@ -97,6 +97,29 @@ Key points to explain to the developer:
 - `#[BelongsTo]` FK properties (like `$categoryId`) are always included in responses and create schemas — they are the foreign key the user sends
 - Relationship properties (`$reviews`) are not DB columns; they're populated via eager loading with `->with('reviews')`
 - Default values (like `$active = true`) are used when the field is not provided
+
+### Validation failures throw `ValidationException`
+
+`Entity::save()` throws `Coagus\PhpApiBuilder\Exceptions\ValidationException` when any validation attribute fails. The exception carries a `public readonly array $errors` keyed by field name:
+
+```php
+use Coagus\PhpApiBuilder\Exceptions\ValidationException;
+
+try {
+    $product = new Product();
+    $product->fill($input);
+    $product->save();
+} catch (ValidationException $e) {
+    // $e->errors has the exact shape:
+    // [
+    //     'email' => ['Email is not a valid address'],
+    //     'name'  => ['Name is required', 'Name exceeds max length 100'],
+    // ]
+    $this->error($e->getMessage(), 422, ['errors' => $e->errors]);
+}
+```
+
+If you let the exception propagate, `ErrorHandler` emits a `422 Unprocessable Entity` in RFC 7807 format with the `errors` map embedded. Never catch `\RuntimeException` to detect validation failures — that was the v1 behavior and no longer applies.
 
 ## Creating a Service
 
@@ -244,6 +267,8 @@ $this->getQueryParams();           // URL query parameters as array
 
 APIDB auto-wraps responses: GET list returns paginated format, GET by ID returns single resource, POST returns 201, DELETE returns 204.
 
+Success responses use `Content-Type: application/json; charset=utf-8`. Error responses (4xx/5xx) use `Content-Type: application/problem+json; charset=utf-8` per RFC 7807. Clients that dispatch on Content-Type must handle both.
+
 ## JSON Response Formats
 
 All JSON keys use **lowerCamelCase** (`userId`, `createdAt`, `totalPages`). URL query parameters use **snake_case** (`?per_page=20&sort_by=name`). The `fill()` method accepts both formats as input.
@@ -278,6 +303,34 @@ All JSON keys use **lowerCamelCase** (`userId`, `createdAt`, `totalPages`). URL 
     "requestId": "a3f4b2c1e9d80716"
 }
 ```
+
+## Error Handling
+
+`ErrorHandler` dispatches on exception class (not on message contents). To produce a specific HTTP status, throw the matching exception class:
+
+| Throw | HTTP status | Intended use |
+|-------|-------------|--------------|
+| `Coagus\PhpApiBuilder\Exceptions\EntityNotFoundException` | 404 | Resource lookup miss |
+| `Coagus\PhpApiBuilder\Exceptions\ValidationException` | 422 | Validation failure (auto-thrown by `Entity::save()`) |
+| `Coagus\PhpApiBuilder\Exceptions\AuthenticationException` | 401 | Missing/invalid credentials |
+| `Coagus\PhpApiBuilder\Exceptions\AuthorizationException` | 403 | Authenticated but lacks permission |
+| `Coagus\PhpApiBuilder\Exceptions\RateLimitException` | 429 | Rate limit exceeded |
+| any other `\Throwable` | 500 | Unhandled — message is hidden in production |
+
+```php
+use Coagus\PhpApiBuilder\Exceptions\{EntityNotFoundException, ValidationException};
+
+public function getShow(int $id): void
+{
+    $user = User::find($id);
+    if ($user === null) {
+        throw new EntityNotFoundException("User {$id} not found");
+    }
+    $this->success($user->toArray());
+}
+```
+
+Matching "not found" in an exception message no longer produces a 404 — that was v1 behavior. Always throw `EntityNotFoundException`. In production, raw exception messages from unmapped `\Throwable`s are replaced with a generic "Internal Server Error"; the original message is logged but never leaked to clients.
 
 ## Naming Conventions
 
@@ -342,6 +395,8 @@ JWT_REFRESH_TTL=604800       // 7 days in seconds
 
 Protected resources (default) require a valid JWT token. Use `#[PublicResource]` to make endpoints public. Scopes control fine-grained access.
 
+The JWT validator unconditionally verifies `iss`, `aud`, `sub`, and `jti` claims on every request. Tokens missing any of these are rejected with `401 Unauthorized`. Configure the expected issuer/audience via `JWT_ISSUER` and `JWT_AUDIENCE` env vars.
+
 ### API Key Authentication
 
 As an alternative to JWT, the library supports API key authentication via the `ApiKeyAuth` class:
@@ -377,7 +432,12 @@ Or via environment variables (no constructor args needed):
 ```env
 RATE_LIMIT_MAX=100
 RATE_LIMIT_WINDOW=60
+RATE_LIMIT_TRUSTED_PROXIES=10.0.0.1,10.0.0.2   # comma-separated, default empty
 ```
+
+### Trusted proxy boundary for `X-Forwarded-For`
+
+Rate limiting keys by client IP. `X-Forwarded-For` is only honored when `REMOTE_ADDR` is in `RATE_LIMIT_TRUSTED_PROXIES`; otherwise the raw `REMOTE_ADDR` is used. Leave `RATE_LIMIT_TRUSTED_PROXIES` empty (the default) unless you run behind a reverse proxy or load balancer — setting it without a real proxy in front lets clients spoof their IP.
 
 Per-resource rate limiting using the `#[Middleware]` attribute:
 ```php
@@ -397,6 +457,27 @@ When exceeded, returns `429 Too Many Requests` in RFC 7807 format with a `Retry-
 Custom storage can be injected via the `store` parameter:
 ```php
 new RateLimitMiddleware(limit: 100, store: new RateLimitStore('/path/to/storage'))
+```
+
+## CORS
+
+CORS is handled by `CorsMiddleware`, configured via `.env`:
+
+```env
+CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
+CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
+CORS_ALLOWED_HEADERS=Content-Type,Authorization,X-Requested-With
+CORS_MAX_AGE=86400
+CORS_ALLOW_CREDENTIALS=false    # default false
+```
+
+### Credentials + wildcard is rejected at construction
+
+Setting `CORS_ALLOWED_ORIGINS=*` together with `CORS_ALLOW_CREDENTIALS=true` throws `InvalidArgumentException` when `CorsMiddleware` is built. The W3C CORS spec forbids this combination, and the library fails fast instead of silently mis-serving. When credentials are required, list exact origins:
+
+```env
+CORS_ALLOWED_ORIGINS=https://app.example.com
+CORS_ALLOW_CREDENTIALS=true
 ```
 
 ## Middleware
@@ -473,6 +554,30 @@ DB_DRIVER=sqlite
 DB_DATABASE=/path/to/database.sqlite
 ```
 
+### Automatic session settings per driver
+
+Each driver applies portable session settings on connect via `DriverInterface::applySessionSettings(PDO)`. Assume these are always active — do not re-issue them manually:
+
+| Driver | Settings applied on connect |
+|--------|----------------------------|
+| `sqlite` | `PRAGMA foreign_keys=ON`, `PRAGMA journal_mode=WAL`, `PRAGMA busy_timeout=5000` |
+| `mysql` | `SET NAMES utf8mb4`, `SET time_zone='+00:00'` |
+| `pgsql` | `SET TIME ZONE 'UTC'`, `SET client_encoding='UTF8'` |
+
+Timestamps are always stored in UTC. `Entity::delete()` and soft-delete use the driver-provided `getCurrentTimestampExpression()` (e.g. `CURRENT_TIMESTAMP` / `NOW()` / `datetime('now')`), so `delete()` works identically across all three drivers.
+
+### Writing a custom driver
+
+`DriverInterface` requires these methods (added in v2):
+
+```php
+public function getCurrentTimestampExpression(): string;   // e.g. "CURRENT_TIMESTAMP"
+public function applySessionSettings(\PDO $pdo): void;     // called once after connect
+public function getRefreshTokenTableDdl(): string;          // CREATE TABLE … for refresh_tokens
+```
+
+Custom driver implementations from v1 must add these three methods to remain compatible.
+
 ## URL Filtering, Sorting, and Pagination
 
 APIDB endpoints automatically support:
@@ -484,6 +589,16 @@ GET /api/v1/users?filter[active]=true&filter[role_id]=2  # Filtering
 GET /api/v1/users?fields=id,name,email                   # Sparse fields
 GET /api/v1/users?include=orders,orders.items             # Include relations
 ```
+
+### Column allowlist (sort & fields)
+
+Identifiers in `?sort=` and `?fields=` are filtered against an entity-property allowlist produced by `QueryBuilder::getColumnAllowlist(): list<string>`. Unknown columns are silently dropped — never interpolated into SQL. A request like:
+
+```
+GET /api/v1/users?sort=id;DROP TABLE users--
+```
+
+is normalized to `ORDER BY id ASC` (the `;DROP…` segment does not match any allowlisted column and is discarded). This closes the identifier-injection surface; relying on it is safe. If you need a custom allowlist (e.g. exposing a computed column), override `getColumnAllowlist()` on your entity.
 
 ## Project Structure
 
@@ -519,18 +634,21 @@ my-api/
 The library includes a full CLI for scaffolding and development:
 
 ```bash
-php api init                             # Initialize new project (interactive)
-php api serve                            # Development server (PHP built-in)
+php api init                             # Initialize new project (interactive, installs the skill)
+php api serve                            # Development server (proc_open, no shell)
 php api env:check                        # Verify environment and dependencies
-php api make:entity Product              # Generate entity + test
+php api make:entity Product              # Generate entity file
 php api make:entity Product --fields="name:string,price:float" --soft-delete
-php api make:service Payment             # Generate service + test
-php api make:middleware RateLimiter       # Generate middleware
+php api make:service Payment             # Generate service file
+php api make:middleware RateLimiter      # Generate middleware
 php api keys:generate                    # Generate JWT key pair
-php api docs:generate                    # Export OpenAPI spec
+php api docs:generate                    # Export OpenAPI spec (JSON)
+php api docs:generate --namespace=App    # Scan a custom namespace (default: App)
 php api demo:install                     # Install Blog API demo
 php api demo:remove                      # Remove demo files and tables
 ```
+
+`make:entity` and `make:service` generate the resource file only; they do not scaffold tests. The AI development skill is installed as part of `init` — there is no separate `skill:install` command. `serve` invokes PHP via `proc_open` with an argv array (no shell), so arguments are not subject to shell expansion.
 
 ## Docker Support
 
