@@ -34,6 +34,8 @@ class Connection
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]
         );
+
+        $this->driver->applySessionSettings($this->pdo);
     }
 
     public static function configure(array $config): void

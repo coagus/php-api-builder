@@ -10,12 +10,12 @@ use Coagus\PhpApiBuilder\Attributes\HasMany;
 use Coagus\PhpApiBuilder\Attributes\PrimaryKey;
 use Coagus\PhpApiBuilder\Attributes\SoftDelete;
 use Coagus\PhpApiBuilder\Attributes\Table;
+use Coagus\PhpApiBuilder\Exceptions\ValidationException;
 use Coagus\PhpApiBuilder\Helpers\Utils;
 use Coagus\PhpApiBuilder\Validation\Attributes\Hidden;
 use Coagus\PhpApiBuilder\Validation\Validator;
 use ReflectionClass;
 use ReflectionProperty;
-use RuntimeException;
 
 abstract class Entity
 {
@@ -96,7 +96,7 @@ abstract class Entity
     {
         $errors = Validator::validate($this);
         if ($errors !== null) {
-            throw new RuntimeException(json_encode($errors));
+            throw new ValidationException($errors);
         }
 
         $pk = static::getPrimaryKeyField();
@@ -125,8 +125,9 @@ abstract class Entity
         $pkValue = $this->{$pk};
 
         if (static::hasSoftDelete()) {
+            $nowExpr = Connection::getInstance()->getDriver()->getCurrentTimestampExpression();
             Connection::getInstance()->execute(
-                "UPDATE {$table} SET deleted_at = datetime('now') WHERE {$pkColumn} = ?",
+                "UPDATE {$table} SET deleted_at = {$nowExpr} WHERE {$pkColumn} = ?",
                 [$pkValue]
             );
         } else {
