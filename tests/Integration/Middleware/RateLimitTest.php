@@ -88,8 +88,14 @@ test('resets count after clearing store', function () {
         ->and($response->getHeader('X-RateLimit-Remaining'))->toBe('0');
 });
 
-test('uses X-Forwarded-For header for client identification', function () {
-    $middleware = new RateLimitMiddleware(limit: 1, windowSeconds: 60, store: $this->store);
+test('honors X-Forwarded-For only when REMOTE_ADDR is a trusted proxy', function () {
+    $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+    $middleware = new RateLimitMiddleware(
+        limit: 1,
+        windowSeconds: 60,
+        store: $this->store,
+        trustedProxies: ['127.0.0.1'],
+    );
 
     $r1 = $middleware->handle(
         new Request('GET', '/test', ['X-Forwarded-For' => '10.0.0.1']),
@@ -102,6 +108,29 @@ test('uses X-Forwarded-For header for client identification', function () {
 
     expect($r1->getStatusCode())->toBe(200)
         ->and($r2->getStatusCode())->toBe(200);
+});
+
+test('ignores X-Forwarded-For when the direct peer is not a trusted proxy', function () {
+    $_SERVER['REMOTE_ADDR'] = '203.0.113.10';
+    $middleware = new RateLimitMiddleware(
+        limit: 1,
+        windowSeconds: 60,
+        store: $this->store,
+        trustedProxies: [],
+    );
+
+    $r1 = $middleware->handle(
+        new Request('GET', '/test', ['X-Forwarded-For' => '10.0.0.1']),
+        $this->handler
+    );
+    $r2 = $middleware->handle(
+        new Request('GET', '/test', ['X-Forwarded-For' => '10.0.0.2']),
+        $this->handler
+    );
+
+    // Both requests hit the same untrusted IP, so the second one MUST be blocked.
+    expect($r1->getStatusCode())->toBe(200)
+        ->and($r2->getStatusCode())->toBe(429);
 });
 
 test('works in pipeline with other middleware', function () {

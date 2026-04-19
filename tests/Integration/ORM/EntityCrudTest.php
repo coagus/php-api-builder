@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
+use Coagus\PhpApiBuilder\Exceptions\ValidationException;
 use Coagus\PhpApiBuilder\ORM\Connection;
-use Tests\Fixtures\Entities\TestUser;
-use Tests\Fixtures\Entities\TestRole;
 use Tests\Fixtures\Entities\TestOrder;
+use Tests\Fixtures\Entities\TestRole;
+use Tests\Fixtures\Entities\TestUser;
 
 beforeEach(function () {
     Connection::reset();
@@ -143,7 +144,7 @@ test('validation runs before save and blocks invalid data', function () {
     $user->password = 'secret';
     // missing required name and email
 
-    expect(fn() => $user->save())->toThrow(RuntimeException::class);
+    expect(fn() => $user->save())->toThrow(ValidationException::class);
 });
 
 test('fill populates entity from array with snake_case keys', function () {
@@ -158,4 +159,22 @@ test('fill populates entity from array with snake_case keys', function () {
     expect($user->name)->toBe('Carlos')
         ->and($user->email)->toBe('carlos@test.com')
         ->and($user->roleId)->toBe(5);
+});
+
+test('soft delete uses the driver-provided CURRENT_TIMESTAMP expression (portable)', function () {
+    // Regression: the UPDATE used to hard-code SQLite datetime('now'), which
+    // breaks on MySQL/Postgres. We delegate to DriverInterface now.
+    $user = new TestUser();
+    $user->name = 'Carlos';
+    $user->email = 'carlos@test.com';
+    $user->password = 'secret';
+    $user->save();
+
+    $user->delete();
+
+    $rows = Connection::getInstance()->query(
+        'SELECT deleted_at FROM users WHERE id = ?',
+        [$user->id]
+    );
+    expect($rows[0]['deleted_at'])->not->toBeNull();
 });

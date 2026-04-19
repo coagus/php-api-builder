@@ -81,3 +81,48 @@ test('throws if not configured', function () {
     Auth::reset();
     Auth::generateAccessToken(['id' => 1]);
 })->throws(RuntimeException::class, 'Auth not configured');
+
+test('rejects token whose iss claim does not match configured issuer', function () {
+    // Craft a token with a different issuer config, then validate under ours.
+    Auth::reset();
+    Auth::configure([
+        'algorithm' => 'HS256',
+        'secret' => 'test-secret-key-at-least-32-chars!!',
+        'issuer' => 'OTHER-issuer',
+        'audience' => 'test-api',
+    ]);
+    $foreign = Auth::generateAccessToken(['id' => 1]);
+
+    Auth::reset();
+    Auth::configure([
+        'algorithm' => 'HS256',
+        'secret' => 'test-secret-key-at-least-32-chars!!',
+        'issuer' => 'test-app',
+        'audience' => 'test-api',
+    ]);
+
+    expect(fn() => Auth::validateToken($foreign))
+        ->toThrow(RuntimeException::class, 'Invalid token issuer');
+});
+
+test('rejects token whose aud claim does not match configured audience', function () {
+    Auth::reset();
+    Auth::configure([
+        'algorithm' => 'HS256',
+        'secret' => 'test-secret-key-at-least-32-chars!!',
+        'issuer' => 'test-app',
+        'audience' => 'OTHER-aud',
+    ]);
+    $foreign = Auth::generateAccessToken(['id' => 1]);
+
+    Auth::reset();
+    Auth::configure([
+        'algorithm' => 'HS256',
+        'secret' => 'test-secret-key-at-least-32-chars!!',
+        'issuer' => 'test-app',
+        'audience' => 'test-api',
+    ]);
+
+    expect(fn() => Auth::validateToken($foreign))
+        ->toThrow(RuntimeException::class, 'Invalid token audience');
+});

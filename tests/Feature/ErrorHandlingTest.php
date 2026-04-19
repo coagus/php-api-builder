@@ -63,3 +63,13 @@ test('error responses include requestId', function () {
 
     expect($response->getHeader('X-Request-ID'))->not->toBeNull();
 });
+
+test('error responses advertise application/problem+json per RFC 7807', function () {
+    $app = new API('Tests\\Fixtures\\App');
+
+    $notFound = $app->run(new Request('GET', '/api/v1/nonexistent'));
+    $validation = $app->run(new Request('POST', '/api/v1/users', [], '{"password":"pass"}'));
+
+    expect($notFound->getHeader('Content-Type'))->toBe('application/problem+json; charset=utf-8')
+        ->and($validation->getHeader('Content-Type'))->toBe('application/problem+json; charset=utf-8');
+});

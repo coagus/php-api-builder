@@ -114,3 +114,33 @@ test('whereIn filters correctly', function () {
     $users = TestUser::query()->whereIn('name', ['Alice', 'Charlie'])->get();
     expect($users)->toHaveCount(2);
 });
+
+test('orWhere on an empty chain produces valid SQL and returns matches', function () {
+    $users = TestUser::query()->orWhere('name', 'Alice')->get();
+
+    expect($users)->toHaveCount(1)
+        ->and($users[0]->name)->toBe('Alice');
+});
+
+test('soft-delete guard is NOT bypassed when orWhere is used', function () {
+    // Without the fix, the clause "deleted_at IS NULL OR name = 'Deleted'"
+    // would include the soft-deleted row. The correct SQL wraps the user
+    // predicate in parentheses AND-joined with the guard.
+    $users = TestUser::query()
+        ->where('name', 'Alice')
+        ->orWhere('name', 'Deleted')
+        ->get();
+
+    $names = array_map(fn($u) => $u->name, $users);
+
+    expect($names)->toContain('Alice')
+        ->and($names)->not->toContain('Deleted');
+});
+
+test('buildWhereSql parenthesizes the user predicate when soft-delete is active', function () {
+    $qb = TestUser::query()->where('name', 'Alice')->orWhere('name', 'Bob');
+    $sql = $qb->toSql();
+
+    expect($sql)->toContain('WHERE deleted_at IS NULL AND (')
+        ->and($sql)->toContain('name = ? OR name = ?');
+});

@@ -108,3 +108,30 @@ test('GET by non-existent ID returns 404', function () {
     expect($response->getStatusCode())->toBe(404)
         ->and($response->getBody()['title'])->toBe('Resource not found');
 });
+
+test('GET list rejects SQL-injection attempts in ?sort via the column allowlist', function () {
+    $malicious = 'id; DROP TABLE users--';
+    $encoded = urlencode($malicious);
+    $handler = createApidb(TestUserApidb::class, 'GET', "/api/v1/users?sort={$encoded}");
+    $handler->get();
+    $response = $handler->getResponse();
+
+    // The unknown/malicious identifier must be silently dropped, not echoed
+    // into SQL — and the query should still return the full list successfully.
+    expect($response->getStatusCode())->toBe(200);
+
+    // Sanity: table still exists after the "attack".
+    $rows = \Coagus\PhpApiBuilder\ORM\Connection::getInstance()
+        ->query('SELECT COUNT(*) as c FROM users');
+    expect((int) $rows[0]['c'])->toBeGreaterThan(0);
+});
+
+test('GET list drops unknown columns from ?fields rather than interpolating them', function () {
+    $handler = createApidb(TestUserApidb::class, 'GET', '/api/v1/users?fields=id,name,malicious_column');
+    $handler->get();
+    $response = $handler->getResponse();
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($response->getBody()['data'][0])->toHaveKey('id')
+        ->and($response->getBody()['data'][0])->toHaveKey('name');
+});

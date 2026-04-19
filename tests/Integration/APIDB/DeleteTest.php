@@ -18,7 +18,6 @@ beforeEach(function () {
     TestRole::clearMetadataCache();
 
     $db->execute("INSERT INTO roles (name) VALUES (?)", ['Admin']);
-    $db->execute("INSERT INTO users (name, email, password, active, role_id) VALUES (?, ?, ?, ?, ?)", ['Alice', 'alice@test.com', 'pass', 1, 1]);
 });
 
 test('DELETE returns 204', function () {
@@ -36,6 +35,11 @@ test('DELETE returns 204', function () {
 });
 
 test('DELETE with SoftDelete sets deleted_at', function () {
+    Connection::getInstance()->execute(
+        "INSERT INTO users (name, email, password, active, role_id) VALUES (?, ?, ?, ?, ?)",
+        ['Alice', 'alice@test.com', 'pass', 1, 1]
+    );
+
     $handler = new TestUserApidb();
     $handler->setRequest(new Request('DELETE', '/api/v1/users/1'));
     $handler->setResourceId('1');
@@ -54,6 +58,11 @@ test('DELETE with SoftDelete sets deleted_at', function () {
 });
 
 test('GET after soft delete does not return the record', function () {
+    Connection::getInstance()->execute(
+        "INSERT INTO users (name, email, password, active, role_id) VALUES (?, ?, ?, ?, ?)",
+        ['Alice', 'alice@test.com', 'pass', 1, 1]
+    );
+
     // Delete user
     $handler = new TestUserApidb();
     $handler->setRequest(new Request('DELETE', '/api/v1/users/1'));

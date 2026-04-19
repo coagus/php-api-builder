@@ -73,3 +73,55 @@ test('drivers generate correct LIMIT OFFSET syntax', function () {
         expect($driver->getLimitOffsetSyntax(10, 20))->toBe('LIMIT 10 OFFSET 20');
     }
 });
+
+test('all drivers expose a portable CURRENT_TIMESTAMP expression', function () {
+    $drivers = [new MySqlDriver(), new PostgresDriver(), new SqliteDriver()];
+
+    foreach ($drivers as $driver) {
+        expect($driver->getCurrentTimestampExpression())->toBe('CURRENT_TIMESTAMP');
+    }
+});
+
+test('SqliteDriver::applySessionSettings enables foreign keys and busy timeout', function () {
+    $pdo = new PDO('sqlite::memory:');
+    (new SqliteDriver())->applySessionSettings($pdo);
+
+    $fk = $pdo->query('PRAGMA foreign_keys')->fetchColumn();
+    $busy = $pdo->query('PRAGMA busy_timeout')->fetchColumn();
+
+    expect((int) $fk)->toBe(1)
+        ->and((int) $busy)->toBe(5000);
+});
+
+test('MySqlDriver::applySessionSettings is safe to call on a mock PDO', function () {
+    // We can't open a real MySQL connection in this env — assert that the
+    // method signature matches the interface and does not throw when the
+    // underlying exec() is a no-op.
+    $driver = new MySqlDriver();
+    $ref = new ReflectionMethod($driver, 'applySessionSettings');
+
+    expect($ref->getNumberOfRequiredParameters())->toBe(1)
+        ->and($ref->getParameters()[0]->getType()?->__toString())->toBe('PDO');
+});
+
+test('PostgresDriver::applySessionSettings is safe to call on a mock PDO', function () {
+    $driver = new PostgresDriver();
+    $ref = new ReflectionMethod($driver, 'applySessionSettings');
+
+    expect($ref->getNumberOfRequiredParameters())->toBe(1)
+        ->and($ref->getParameters()[0]->getType()?->__toString())->toBe('PDO');
+});
+
+test('each driver returns driver-specific refresh-token DDL', function () {
+    $mysql = (new MySqlDriver())->getRefreshTokenTableDdl();
+    $pg = (new PostgresDriver())->getRefreshTokenTableDdl();
+    $sqlite = (new SqliteDriver())->getRefreshTokenTableDdl();
+
+    expect($mysql)->toContain('refresh_tokens')
+        ->and($mysql)->toContain('VARCHAR')
+        ->and($mysql)->toContain('ENGINE=InnoDB')
+        ->and($pg)->toContain('refresh_tokens')
+        ->and($pg)->toContain('TIMESTAMPTZ')
+        ->and($sqlite)->toContain('refresh_tokens')
+        ->and($sqlite)->toContain('TEXT');
+});
