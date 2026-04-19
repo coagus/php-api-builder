@@ -9,6 +9,8 @@ use Coagus\PhpApiBuilder\ORM\Entity;
 
 class ApiResponse
 {
+    public const PROBLEM_JSON_CONTENT_TYPE = 'application/problem+json; charset=utf-8';
+
     public static function success(mixed $data, int $code = 200, ?array $meta = null, ?array $links = null): Response
     {
         $body = ['data' => self::normalizeData($data)];
@@ -60,7 +62,10 @@ class ApiResponse
             $body['errors'] = $errors;
         }
 
-        return new Response($body, $status);
+        $response = new Response($body, $status);
+        $response->header('Content-Type', self::PROBLEM_JSON_CONTENT_TYPE);
+
+        return $response;
     }
 
     public static function paginated(array $data, array $meta): Response
