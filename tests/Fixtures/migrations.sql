@@ -34,3 +34,9 @@ CREATE TABLE IF NOT EXISTS user_tags (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (tag_id) REFERENCES tags(id)
 );
+
+CREATE TABLE IF NOT EXISTS articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL
+);
