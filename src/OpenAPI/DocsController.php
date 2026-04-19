@@ -9,6 +9,9 @@ use Coagus\PhpApiBuilder\Resource\Service;
 
 class DocsController extends Service
 {
+    private const DEFAULT_SPEC_PATH = '/api/v1/docs';
+    private const SAFE_PATH_PATTERN = '/^[A-Za-z0-9\/_\-\.]+$/';
+
     private SpecBuilder $specBuilder;
 
     public function __construct(SpecBuilder $specBuilder)
@@ -36,8 +39,7 @@ class DocsController extends Service
 
     private function swaggerHtml(): Response
     {
-        $specUrl = $this->request?->getPath() ?? '/api/v1/docs';
-        $specUrl = str_replace('/swagger', '', $specUrl);
+        $specUrl = $this->resolveSpecUrl('/swagger');
 
         $html = <<<HTML
         <!DOCTYPE html>
@@ -51,17 +53,12 @@ class DocsController extends Service
         </body></html>
         HTML;
 
-        $response = new Response(null, 200);
-        $response->header('Content-Type', 'text/html; charset=utf-8');
-        $response->setBody($html);
-
-        return $response;
+        return $this->htmlResponse($html);
     }
 
     private function redocHtml(): Response
     {
-        $specUrl = $this->request?->getPath() ?? '/api/v1/docs';
-        $specUrl = str_replace('/redoc', '', $specUrl);
+        $specUrl = $this->resolveSpecUrl('/redoc');
 
         $html = <<<HTML
         <!DOCTYPE html>
@@ -73,6 +70,28 @@ class DocsController extends Service
         </body></html>
         HTML;
 
+        return $this->htmlResponse($html);
+    }
+
+    /**
+     * Derive the spec URL from the current request path, then HTML-escape it.
+     * Falls back to the default spec path if the derived value contains
+     * anything beyond the safe character set.
+     */
+    private function resolveSpecUrl(string $actionSegment): string
+    {
+        $path = $this->request?->getPath() ?? self::DEFAULT_SPEC_PATH;
+        $candidate = str_replace($actionSegment, '', $path);
+
+        if ($candidate === '' || !preg_match(self::SAFE_PATH_PATTERN, $candidate)) {
+            $candidate = self::DEFAULT_SPEC_PATH;
+        }
+
+        return htmlspecialchars($candidate, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    private function htmlResponse(string $html): Response
+    {
         $response = new Response(null, 200);
         $response->header('Content-Type', 'text/html; charset=utf-8');
         $response->setBody($html);
