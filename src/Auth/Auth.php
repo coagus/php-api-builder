@@ -59,6 +59,7 @@ class Auth
         $payload = [
             'iss' => $config['issuer'],
             'sub' => 'user:' . $userId,
+            'aud' => $config['audience'],
             'iat' => $now,
             'exp' => $now + $config['refresh_ttl'],
             'jti' => bin2hex(random_bytes(16)),
@@ -79,12 +80,20 @@ class Auth
             throw new RuntimeException('Invalid token: ' . $e->getMessage());
         }
 
-        if (isset($decoded->iss) && $decoded->iss !== $config['issuer']) {
+        if (!isset($decoded->iss) || $decoded->iss !== $config['issuer']) {
             throw new RuntimeException('Invalid token issuer.');
         }
 
-        if (isset($decoded->aud) && $decoded->aud !== $config['audience']) {
+        if (!isset($decoded->aud) || $decoded->aud !== $config['audience']) {
             throw new RuntimeException('Invalid token audience.');
+        }
+
+        if (!isset($decoded->sub) || $decoded->sub === '') {
+            throw new RuntimeException('Invalid token subject.');
+        }
+
+        if (!isset($decoded->jti) || $decoded->jti === '') {
+            throw new RuntimeException('Invalid token identifier.');
         }
 
         return $decoded;

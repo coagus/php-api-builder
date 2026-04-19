@@ -11,17 +11,9 @@ class RefreshTokenStore
 {
     public static function createTable(): void
     {
-        Connection::getInstance()->exec("
-            CREATE TABLE IF NOT EXISTS refresh_tokens (
-                id TEXT PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                token_hash TEXT NOT NULL,
-                family_id TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                revoked INTEGER DEFAULT 0,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        ");
+        $connection = Connection::getInstance();
+        $ddl = $connection->getDriver()->getRefreshTokenTableDdl();
+        $connection->exec($ddl);
     }
 
     public static function store(string $tokenId, int $userId, string $tokenHash, string $familyId, int $expiresAt): void
