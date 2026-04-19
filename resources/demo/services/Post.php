@@ -29,7 +29,7 @@ class Post extends APIDB
             return;
         }
 
-        Connection::transaction(function () use ($post) {
+        Connection::getInstance()->transaction(function () use ($post) {
             $post->status = 'published';
             $post->save();
         });

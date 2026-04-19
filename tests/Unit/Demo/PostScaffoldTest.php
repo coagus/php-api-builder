@@ -18,3 +18,12 @@ test('demo Post service reads id from Resource::$resourceId, not from Request', 
         ->and($template)->toContain('$this->resourceId')
         ->and($template)->not->toContain('$this->request->resourceId');
 });
+
+test('demo Post service calls Connection::transaction on an instance, not statically', function () {
+    $template = file_get_contents(__DIR__ . '/../../../resources/demo/services/Post.php');
+
+    // Regression guard: Connection::transaction is an instance method.
+    // The `Connection::transaction(` static call throws at runtime.
+    expect($template)->toContain('Connection::getInstance()->transaction(')
+        ->and($template)->not->toMatch('/Connection::transaction\s*\(/');
+});
