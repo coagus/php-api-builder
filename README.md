@@ -57,7 +57,7 @@ That's it. You now have a fully functional API with `GET`, `POST`, `PUT`, `PATCH
 - **REST conventions** -- lowerCamelCase JSON keys, snake_case query params, RFC 7807 errors
 - **Security built-in** with OWASP headers, CORS, input sanitization, SQL injection protection
 - **Docker-first** workflow -- start a project without PHP installed locally
-- **CLI scaffolding** for entities, services, middleware, and tests
+- **CLI scaffolding** for entities, services, and middleware
 - **Error traceability** with request ID correlation across all layers
 - **AI development skill** included -- install it and your AI assistant knows the library
 
@@ -290,14 +290,13 @@ No extra annotations needed. `#[Required]` becomes `required`, `#[MaxLength(50)]
 ./api init                   # Initialize new project (interactive)
 ./api serve                  # Development server
 ./api env:check              # Verify environment and dependencies
-./api make:entity Product    # Generate entity + test
-./api make:service Payment   # Generate service + test
+./api make:entity Product    # Generate entity class
+./api make:service Payment   # Generate service class
 ./api make:middleware Auth    # Generate middleware
 ./api keys:generate          # Generate JWT key pair
 ./api docs:generate          # Export OpenAPI spec
-./api test                   # Run tests (Pest)
-./api test --coverage        # Tests with coverage report
-./api skill:install          # Install AI development skill
+./api demo:install           # Install Blog API demo
+./api demo:remove            # Remove demo files and tables
 ```
 
 The `./api` wrapper detects whether to use local PHP or Docker automatically. Teams with mixed setups work seamlessly.
@@ -339,8 +338,8 @@ my-api/
 │   ├── User.php
 │   └── Product.php
 ├── services/               # Pure services (no DB)
-│   └── Health.php
-├── middleware/              # Custom middleware
+│   ├── Health.php
+│   └── AuthMiddleware.php   # Custom middleware (also in services/)
 ├── tests/                  # Pest tests
 ├── docker-compose.yml      # Docker environment
 └── log/                    # Error logs (auto-generated)
@@ -360,15 +359,11 @@ composer require coagus/php-api-builder
 
 ## Documentation
 
-Full architecture and design documentation is available in [resources/docs/01-analisis-y-diseno.md](resources/docs/01-analisis-y-diseno.md).
+Full architecture and design documentation is available in [resources/docs/01-analisis-y-diseno.md](resources/docs/01-analisis-y-diseno.md). Canonical Mermaid diagrams (C4 Container, request lifecycle, auth sequence, entity model, rate limit) live under [resources/docs/diagrams/](resources/docs/diagrams/).
 
 ## AI Development Skill
 
-The library includes an AI skill that teaches Claude Code and Cowork how to work with php-api-builder. Install it and your AI assistant can generate entities, services, queries, and configurations following the library's patterns:
-
-```bash
-./api skill:install
-```
+The library includes an AI skill that teaches Claude Code and Cowork how to work with php-api-builder. It is installed automatically by `./api init` into `.claude/skills/php-api-builder/`, so your AI assistant can generate entities, services, queries, and configurations following the library's patterns.
 
 ## License
 
