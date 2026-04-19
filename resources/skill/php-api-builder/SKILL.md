@@ -1,6 +1,6 @@
 ---
 name: php-api-builder
-description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). Trigger on: validation exception, entity not found exception, driver portability, RFC 7807 problem json, column allowlist, trusted proxies, CORS credentials, application/problem+json, ValidationException, EntityNotFoundException. This skill knows every pattern, attribute, and convention of the library."
+description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). Trigger on: validation exception, entity not found exception, driver portability, RFC 7807 problem json, column allowlist, trusted proxies, CORS credentials, application/problem+json, ValidationException, EntityNotFoundException, per-route middleware, #[Middleware] attribute, #[Ignore] attribute, virtual property hook, password hash hook, set-only hook, foreign key idempotent, FK column suffix. This skill knows every pattern, attribute, and convention of the library."
 ---
 
 # PHP API Builder v2 - Development Skill
@@ -28,15 +28,16 @@ Both inherit from `Resource`, which provides response methods and request helper
 | `#[Unique]` | Property | Ensures uniqueness in DB |
 | `#[MaxLength(n)]` | Property | Maximum string length |
 | `#[MinLength(n)]` | Property | Minimum string length |
-| `#[Hidden]` | Property | Excluded from JSON output and create schema (e.g., passwords) |
+| `#[Hidden]` | Property | Excluded from JSON output and create schema (e.g., password hashes) |
 | `#[IsReadOnly]` | Property | Excluded from create/update schema (auto-generated fields like timestamps, slugs) |
+| `#[Ignore]` | Property | Invisible to ORM, validator, and OpenAPI — used for virtual property hooks that transform input |
 | `#[SoftDelete]` | Class | Enables soft delete (deleted_at column) |
 | `#[BelongsTo(Class)]` | Property | Many-to-one relationship |
 | `#[HasMany(Class)]` | Property | One-to-many relationship |
 | `#[BelongsToMany(Class)]` | Property | Many-to-many (pivot table) |
 | `#[PublicResource]` | Class | No auth required for this resource |
 | `#[Route('path')]` | Class | Custom URL path override |
-| `#[Middleware(Class)]` | Class/Method | Attach middleware |
+| `#[Middleware(Class, ...args)]` | Class/Method | Attach middleware per-route with parameterized construction; repeatable |
 
 ## Creating an Entity
 
@@ -93,10 +94,55 @@ Key points to explain to the developer:
 - Property hooks (`set =>`) run automatically on assignment - use for sanitization and validation
 - `#[SoftDelete]` adds a `deleted_at` column; `delete()` sets it instead of removing the row
 - `#[IsReadOnly]` marks fields that are auto-generated (timestamps, slugs) — they appear in GET responses but not in POST/PUT schemas in Swagger
-- `#[Hidden]` completely excludes fields from all JSON output (responses and schemas) — use for passwords
+- `#[Hidden]` completely excludes fields from all JSON output (responses and schemas) — use for persisted password hashes
+- `#[Ignore]` removes a property from ORM, validator, and schemas entirely — use when the property is a write-only virtual hook (see "Virtual Property Hooks" below)
 - `#[BelongsTo]` FK properties (like `$categoryId`) are always included in responses and create schemas — they are the foreign key the user sends
 - Relationship properties (`$reviews`) are not DB columns; they're populated via eager loading with `->with('reviews')`
 - Default values (like `$active = true`) are used when the field is not provided
+
+### Foreign-key column name is idempotent on `_id`
+
+`#[BelongsTo(Class)]` without an explicit `foreignKey:` infers the DB column from the PHP property name. The inference is **idempotent** on the `_id` suffix:
+
+- `public int $categoryId` → column `category_id`
+- `public int $category_id` → column `category_id` (no double suffix)
+- `public TestRole $role` (typed) → column `role_id`
+
+Never name a property `xxxIdId` expecting special handling — the helper `Utils::foreignKeyColumn()` appends `_id` only when the snake_cased name does not already end in `_id`.
+
+### Virtual Property Hooks with `#[Ignore]`
+
+PHP 8.4 set-only hooks let you transform input without persisting the raw value. Pair them with `#[Ignore]` so the ORM ignores the virtual property and writes only the backing column:
+
+```php
+use Coagus\PhpApiBuilder\Attributes\Ignore;
+use Coagus\PhpApiBuilder\Validation\Attributes\Hidden;
+
+class User extends Entity
+{
+    #[Hidden]
+    public string $passwordHash = '';          // the real DB column
+
+    #[Ignore]
+    public string $password {                  // the virtual hook
+        set => $this->passwordHash = password_hash($value, PASSWORD_ARGON2ID);
+    }
+}
+
+// Usage
+$user = new User();
+$user->password = $request->input->password;   // hashes into passwordHash
+$user->save();                                 // INSERT persists password_hash only
+```
+
+An `#[Ignore]` property:
+- is NOT written to INSERT / UPDATE
+- is NOT hydrated from SELECT rows (avoids re-hashing on load)
+- is NOT checked by the validator (avoids triggering the set hook with a read)
+- is NOT emitted in response bodies
+- is NOT included in the sort/fields allowlist or OpenAPI schema
+
+Without `#[Ignore]`, the ORM's reflection pass would re-invoke the `set` hook during hydration, corrupting the already-hashed value. Use `#[Ignore]` whenever the property exists only to transform incoming data.
 
 ### Validation failures throw `ValidationException`
 
@@ -439,10 +485,22 @@ RATE_LIMIT_TRUSTED_PROXIES=10.0.0.1,10.0.0.2   # comma-separated, default empty
 
 Rate limiting keys by client IP. `X-Forwarded-For` is only honored when `REMOTE_ADDR` is in `RATE_LIMIT_TRUSTED_PROXIES`; otherwise the raw `REMOTE_ADDR` is used. Leave `RATE_LIMIT_TRUSTED_PROXIES` empty (the default) unless you run behind a reverse proxy or load balancer — setting it without a real proxy in front lets clients spoof their IP.
 
-Per-resource rate limiting using the `#[Middleware]` attribute:
+Per-resource or per-method rate limiting using the `#[Middleware]` attribute. Arguments on the attribute are forwarded to the middleware constructor as named arguments:
+
 ```php
-#[Middleware(new RateLimitMiddleware(limit: 20, windowSeconds: 60))]
-class PostService extends APIDB { ... }
+use Coagus\PhpApiBuilder\Attributes\Middleware;
+use Coagus\PhpApiBuilder\Http\Middleware\RateLimitMiddleware;
+
+// Class-level: applies to every verb on this resource.
+#[Middleware(RateLimitMiddleware::class, limit: 20, windowSeconds: 60)]
+class PostService extends APIDB
+{
+    protected string $entity = Post::class;
+
+    // Method-level override: tighter budget for the expensive custom endpoint.
+    #[Middleware(RateLimitMiddleware::class, limit: 3, windowSeconds: 60)]
+    public function postExport(): void { /* ... */ }
+}
 ```
 
 Responses include standard headers:
@@ -482,34 +540,62 @@ CORS_ALLOW_CREDENTIALS=true
 
 ## Middleware
 
-Create custom middleware following PSR-15:
+The library dispatches middleware in four layers on every matched request:
+
+1. **Globals** registered via `API::middleware([...])` — CORS, security headers, auth, rate limit, etc.
+2. **Class-level** `#[Middleware]` attributes on the resource class (`Service`, `APIDB`, or `Resource` subclass).
+3. **Method-level** `#[Middleware]` attributes on the specific verb handler (`get`, `post`, `postLogin`, ...).
+4. **Handler** — the verb method itself.
+
+Globals set the baseline; per-route `#[Middleware]` adds targeted policy. The attribute is repeatable at both class and method scope and runs attributes in declaration order.
+
+### Creating a custom middleware
 
 ```php
 <?php
 
 namespace App\Middleware;
 
+use Coagus\PhpApiBuilder\Helpers\ApiResponse;
 use Coagus\PhpApiBuilder\Http\Middleware\MiddlewareInterface;
 use Coagus\PhpApiBuilder\Http\Request;
 use Coagus\PhpApiBuilder\Http\Response;
 
-class RateLimiter implements MiddlewareInterface
+final class TenantGuard implements MiddlewareInterface
 {
+    public function __construct(private readonly string $header = 'X-Tenant-Id') {}
+
     public function handle(Request $request, callable $next): Response
     {
-        // Check rate limit
-        if ($this->isRateLimited($request)) {
-            return Response::error('Too many requests', 429);
+        if ($request->getHeader($this->header) === null) {
+            return ApiResponse::error('Missing tenant', 400);
         }
 
         return $next($request);
     }
 }
-
-// Apply to a resource:
-#[Middleware(RateLimiter::class)]
-class User extends Entity { ... }
 ```
+
+### Attaching it per-route
+
+```php
+use App\Middleware\TenantGuard;
+use Coagus\PhpApiBuilder\Attributes\Middleware;
+use Coagus\PhpApiBuilder\Http\Middleware\RateLimitMiddleware;
+
+// Class-level: every verb on Orders requires the tenant header.
+#[Middleware(TenantGuard::class, header: 'X-Tenant-Id')]
+class Orders extends APIDB
+{
+    protected string $entity = Order::class;
+
+    // Method-level: stack multiple attributes in declaration order.
+    #[Middleware(RateLimitMiddleware::class, limit: 5, windowSeconds: 60)]
+    public function postExport(): void { /* ... */ }
+}
+```
+
+`#[Middleware]` must target a class that implements `MiddlewareInterface`; otherwise the dispatcher raises `RuntimeException` at resolution time — it never silently drops the declaration. Middleware for `Service` / `APIDB` subclasses is honored; a bare `Entity` gets wrapped in a generic `APIDB` at dispatch and its per-route attributes are picked up from there.
 
 ## Transactions
 

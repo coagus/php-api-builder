@@ -4,6 +4,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/) and [SemVer](https://sem
 
 This log tracks changes to the library-shipped skill at `resources/skill/php-api-builder/SKILL.md`, consumed by Claude agents building APIs with `coagus/php-api-builder` v2.
 
+## [2.1.0] - 2026-04-18
+
+Backward-compatible additions reflecting library changes shipped in `v2.0.0-alpha.22`.
+
+### Added
+
+- Quick reference entry for `#[Ignore]` (property) — marks a public property as invisible to ORM, validator, and OpenAPI. Used for virtual property hooks that transform input without persisting the raw value (e.g. `set =>` password hashers writing to a sibling `#[Hidden] passwordHash` column).
+- New section **Virtual Property Hooks with `#[Ignore]`** under "Creating an Entity" showing the canonical hook + backing-column pattern.
+- New subsection **Foreign-key column name is idempotent on `_id`** documenting that `#[BelongsTo]` inference no longer doubles the `_id` suffix when the PHP property already ends in `Id` / `_id`.
+- `#[Middleware]` quick-reference row updated to `#[Middleware(Class, ...args)]` signaling parameterized + repeatable construction.
+- Expanded **Middleware** section describing the four-layer dispatch pipeline (globals → class-level → method-level → handler) with a stacked example and a `TenantGuard` sample middleware carrying constructor arguments via named attribute args.
+
+### Changed
+
+- **Per-resource rate-limiting example rewritten.** Previously the skill showed `#[Middleware(new RateLimitMiddleware(limit: 20))]`, which is invalid PHP — attribute arguments must be constant expressions. The pattern is now `#[Middleware(RateLimitMiddleware::class, limit: 20, windowSeconds: 60)]`, which the library's `MiddlewareResolver` instantiates at dispatch time.
+- **Custom-middleware example placement corrected.** The sample no longer attaches middleware directly to an `Entity` subclass; it attaches to an `APIDB` subclass at class level and to a specific verb at method level, matching the real dispatch model.
+
+### Fixed
+
+- Triggers for `per-route middleware`, `#[Middleware] attribute`, `#[Ignore] attribute`, `virtual property hook`, `password hash hook`, `set-only hook`, `foreign key idempotent`, and `FK column suffix` added to the skill description so downstream agents auto-load when asked about any of these.
+
 ## [2.0.0] - 2026-04-18
 
 First versioned release of the skill. Previous revisions were unversioned and tracked library v1.x behavior. This entry captures every divergence between v1 and v2 that a consuming agent must know.
