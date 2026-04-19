@@ -7,6 +7,7 @@ namespace Coagus\PhpApiBuilder;
 use Coagus\PhpApiBuilder\Helpers\ErrorHandler;
 use Coagus\PhpApiBuilder\Http\Middleware\MiddlewareInterface;
 use Coagus\PhpApiBuilder\Http\Middleware\MiddlewarePipeline;
+use Coagus\PhpApiBuilder\Http\Middleware\MiddlewareResolver;
 use Coagus\PhpApiBuilder\Http\Request;
 use Coagus\PhpApiBuilder\Http\Response;
 use Coagus\PhpApiBuilder\OpenAPI\DocsController;
@@ -119,6 +120,35 @@ class API
             return ErrorHandler::methodNotAllowed($request->getMethod(), $request->getPath());
         }
 
+        return $this->runThroughRouteMiddlewares(
+            $class,
+            $method,
+            $request,
+            fn(Request $req) => $this->invokeHandler($handler, $method)
+        );
+    }
+
+    private function runThroughRouteMiddlewares(
+        string $class,
+        string $method,
+        Request $request,
+        callable $terminal
+    ): Response {
+        $middlewares = MiddlewareResolver::resolveFor($class, $method);
+        if ($middlewares === []) {
+            return $terminal($request);
+        }
+
+        $pipeline = new MiddlewarePipeline();
+        foreach ($middlewares as $middleware) {
+            $pipeline->pipe($middleware);
+        }
+
+        return $pipeline->process($request, $terminal);
+    }
+
+    private function invokeHandler(object $handler, string $method): Response
+    {
         $handler->{$method}();
 
         $response = $handler->getResponse();
