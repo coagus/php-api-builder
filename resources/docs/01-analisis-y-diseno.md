@@ -1,7 +1,7 @@
 # PHP API Builder v2 — Análisis y Diseño
 
 > Documento vivo de arquitectura y diseño para la nueva versión de php-api-builder.
-> Última actualización: 2026-04-03
+> Última actualización: 2026-04-18
 
 ---
 
@@ -10,7 +10,8 @@
 Los diagramas canónicos (Mermaid, versionados) viven en [`diagrams/`](diagrams/) y cubren las vistas que el resto del documento referencia:
 
 - [architecture-container.md](diagrams/architecture-container.md) — Vista C4 Container: la app PHP, la base de datos, el almacén de rate limit, logs y la librería JWT.
-- [request-lifecycle.md](diagrams/request-lifecycle.md) — Flujo de una petición: pipeline de middleware (CORS, security headers, auth, rate limit), router y handlers (Service / APIDB / Entity).
+- [request-lifecycle.md](diagrams/request-lifecycle.md) — Flujo de una petición: pipeline de middleware global, router, middleware per-ruta (class y method) y handlers (Service / APIDB / Entity).
+- [middleware-pipeline.md](diagrams/middleware-pipeline.md) — Detalle de las cuatro capas del middleware: globales → class-level (`#[Middleware]` en la clase) → method-level (`#[Middleware]` en el verbo) → handler.
 - [auth-sequence.md](diagrams/auth-sequence.md) — Secuencia de login (emisión de access + refresh) y secuencia de petición autenticada con Bearer JWT.
 - [entity-model-example.md](diagrams/entity-model-example.md) — Diagrama ER ilustrativo con el demo Blog (User, Post, Comment, Tag); no es el esquema de la librería.
 - [rate-limit-flow.md](diagrams/rate-limit-flow.md) — Flowchart del middleware de rate limit, headers `X-RateLimit-*` y respuesta 429 con `Retry-After`.

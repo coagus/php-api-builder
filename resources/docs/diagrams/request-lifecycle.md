@@ -19,8 +19,9 @@ flowchart TD
     Route -- matched --> Kind{Resource kind?}
     Kind -- Service / APIDB subclass --> Handler[Instantiate subclass]
     Kind -- plain Entity --> Wrap[Wrap in generic APIDB]
-    Handler --> Invoke[Invoke verb handler<br/>get / post / put / patch / delete<br/>or custom postAction]
-    Wrap --> Invoke
+    Handler --> RouteMW[[Per-route middleware pipeline<br/>#Middleware class-level then method-level]]
+    Wrap --> RouteMW
+    RouteMW --> Invoke[Invoke verb handler<br/>get / post / put / patch / delete<br/>or custom postAction]
     Invoke --> Resp([Response + X-Request-ID + rate-limit headers])
     DocsCtrl --> Resp
     Err401 --> Resp
@@ -29,4 +30,4 @@ flowchart TD
     Err429 --> Resp
 ```
 
-**Figure 2 — Request lifecycle.** Every request passes through the middleware pipeline registered on `API::middleware()` before the router matches a resource. The default order is CORS → security headers → auth → rate limit, but the order is whatever the application registers. `Router::resolve()` maps kebab-case URL segments to PascalCase class names in the application namespace; a bare `Entity` subclass is wrapped at runtime in a generic `APIDB` to expose standard CRUD verbs. Error branches return RFC 7807 problem responses. See `src/API.php::run()`, `src/API.php::dispatch()`, and `src/Http/Middleware/MiddlewarePipeline.php`.
+**Figure 2 — Request lifecycle.** Every request passes through the middleware pipeline registered on `API::middleware()` before the router matches a resource. The default order is CORS → security headers → auth → rate limit, but the order is whatever the application registers. `Router::resolve()` maps kebab-case URL segments to PascalCase class names in the application namespace; a bare `Entity` subclass is wrapped at runtime in a generic `APIDB` to expose standard CRUD verbs. After the handler is resolved, `MiddlewareResolver` reads `#[Middleware]` attributes from the resource class and the matched method and runs them (in that order) before the verb handler executes; see `diagrams/middleware-pipeline.md` for the layered detail. Error branches return RFC 7807 problem responses. See `src/API.php::run()`, `src/API.php::dispatch()`, `src/Http/Middleware/MiddlewareResolver.php`, and `src/Http/Middleware/MiddlewarePipeline.php`.

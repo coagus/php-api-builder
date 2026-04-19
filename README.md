@@ -32,7 +32,12 @@ class Product extends Entity
     public string $email { set => strtolower(trim($value)); }
 
     #[Hidden]
-    public string $password { set => password_hash($value, PASSWORD_ARGON2ID); }
+    public string $passwordHash = '';
+
+    #[Ignore]
+    public string $password {
+        set => $this->passwordHash = password_hash($value, PASSWORD_ARGON2ID);
+    }
 
     #[BelongsTo(Category::class)]
     public int $categoryId;
@@ -221,6 +226,54 @@ class UserService extends APIDB
 }
 ```
 
+## Per-route Middleware
+
+Attach middleware to a specific resource class or HTTP method with the `#[Middleware]` attribute. Parameters are forwarded to the middleware constructor as named arguments, and the attribute is repeatable:
+
+```php
+use Coagus\PhpApiBuilder\Attributes\Middleware;
+use Coagus\PhpApiBuilder\Http\Middleware\RateLimitMiddleware;
+use Coagus\PhpApiBuilder\Http\Middleware\AuthMiddleware;
+
+class Reports extends APIDB
+{
+    protected string $entity = Report::class;
+
+    // Tight per-endpoint budget, independent of the global stack.
+    #[Middleware(RateLimitMiddleware::class, limit: 10, windowSeconds: 60)]
+    public function get(): void
+    {
+        // ...
+    }
+
+    // Multiple middlewares stack in declaration order.
+    #[Middleware(AuthMiddleware::class)]
+    #[Middleware(RateLimitMiddleware::class, limit: 3, windowSeconds: 60)]
+    public function postExport(): void
+    {
+        // ...
+    }
+}
+```
+
+The dispatch pipeline runs global middleware first (registered via `API::middleware([...])`), then class-level `#[Middleware]`, then method-level `#[Middleware]`, then the handler. The middleware class must implement `MiddlewareInterface`; otherwise dispatch fails loudly.
+
+## Virtual Property Hooks with `#[Ignore]`
+
+`#[Ignore]` marks a public property as invisible to the ORM, validator, and OpenAPI generator. It pairs naturally with a PHP 8.4 `set`-only hook that writes to a sibling backing column:
+
+```php
+#[Hidden]
+public string $passwordHash = '';
+
+#[Ignore]
+public string $password {
+    set => $this->passwordHash = password_hash($value, PASSWORD_ARGON2ID);
+}
+```
+
+An `#[Ignore]` property is not written to INSERT/UPDATE, not hydrated from SELECT rows, not checked by the validator, not emitted in response bodies, and not surfaced in OpenAPI schemas. Use it whenever the property exists only to transform input — never as a persisted column.
+
 ## Query Builder
 
 Five levels of complexity -- use what you need:
@@ -266,11 +319,16 @@ class User extends Entity
     public string $email { set => strtolower(trim($value)); }
 
     #[Hidden]
-    public string $password { set => password_hash($value, PASSWORD_ARGON2ID); }
+    public string $passwordHash = '';
+
+    #[Ignore]
+    public string $password {
+        set => $this->passwordHash = password_hash($value, PASSWORD_ARGON2ID);
+    }
 }
 ```
 
-`#[Required]` validates presence, `#[Email]` validates format, `#[Unique]` checks the database, `#[Hidden]` excludes the field from responses, and property hooks sanitize on assignment.
+`#[Required]` validates presence, `#[Email]` validates format, `#[Unique]` checks the database, `#[Hidden]` excludes the field from responses, `#[Ignore]` hides a virtual property from ORM/validator/schemas, and property hooks sanitize on assignment.
 
 ## Auto-Generated API Documentation
 
