@@ -17,7 +17,7 @@ class Post extends APIDB
 
     public function patchPublish(): void
     {
-        $id = $this->request->resourceId ?? null;
+        $id = $this->resourceId;
         if (!$id) {
             $this->error('Bad Request', 400, 'Post ID is required.');
             return;
@@ -39,7 +39,7 @@ class Post extends APIDB
 
     public function patchArchive(): void
     {
-        $id = $this->request->resourceId ?? null;
+        $id = $this->resourceId;
         if (!$id) {
             $this->error('Bad Request', 400, 'Post ID is required.');
             return;
