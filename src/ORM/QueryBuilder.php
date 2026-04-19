@@ -5,16 +5,24 @@ declare(strict_types=1);
 namespace Coagus\PhpApiBuilder\ORM;
 
 use Coagus\PhpApiBuilder\Helpers\Utils;
+use InvalidArgumentException;
+use ReflectionClass;
+use ReflectionProperty;
 
 class QueryBuilder
 {
+    private const BOOLEAN_AND = 'AND';
+    private const BOOLEAN_OR = 'OR';
+
     private array $selects = [];
+    /** @var list<array{boolean: string, sql: string}> */
     private array $wheres = [];
     private array $bindings = [];
     private array $orderBys = [];
     private ?int $limitValue = null;
     private ?int $offsetValue = null;
     private array $withs = [];
+    private ?array $columnAllowlist = null;
 
     public function __construct(
         private readonly string $entityClass
@@ -30,21 +38,25 @@ class QueryBuilder
                 $flat[] = $f;
             }
         }
-        $this->selects = array_map(fn(string $f) => Utils::camelToSnake($f), $flat);
+
+        $this->selects = array_map(
+            fn(string $f) => $this->resolveColumn($f),
+            $flat
+        );
 
         return $this;
     }
 
     public function where(string $field, mixed $operatorOrValue = null, mixed $value = null): static
     {
-        $column = Utils::camelToSnake($field);
+        $column = $this->resolveColumn($field);
 
         if ($value === null && $operatorOrValue !== null) {
-            $this->wheres[] = "{$column} = ?";
+            $this->wheres[] = ['boolean' => self::BOOLEAN_AND, 'sql' => "{$column} = ?"];
             $this->bindings[] = $operatorOrValue;
         } else {
-            $operator = $operatorOrValue;
-            $this->wheres[] = "{$column} {$operator} ?";
+            $operator = $this->assertOperator((string) $operatorOrValue);
+            $this->wheres[] = ['boolean' => self::BOOLEAN_AND, 'sql' => "{$column} {$operator} ?"];
             $this->bindings[] = $value;
         }
 
@@ -53,14 +65,14 @@ class QueryBuilder
 
     public function orWhere(string $field, mixed $operatorOrValue = null, mixed $value = null): static
     {
-        $column = Utils::camelToSnake($field);
+        $column = $this->resolveColumn($field);
 
         if ($value === null && $operatorOrValue !== null) {
-            $this->wheres[] = "OR {$column} = ?";
+            $this->wheres[] = ['boolean' => self::BOOLEAN_OR, 'sql' => "{$column} = ?"];
             $this->bindings[] = $operatorOrValue;
         } else {
-            $operator = $operatorOrValue;
-            $this->wheres[] = "OR {$column} {$operator} ?";
+            $operator = $this->assertOperator((string) $operatorOrValue);
+            $this->wheres[] = ['boolean' => self::BOOLEAN_OR, 'sql' => "{$column} {$operator} ?"];
             $this->bindings[] = $value;
         }
 
@@ -69,9 +81,9 @@ class QueryBuilder
 
     public function whereIn(string $field, array $values): static
     {
-        $column = Utils::camelToSnake($field);
+        $column = $this->resolveColumn($field);
         $placeholders = implode(', ', array_fill(0, count($values), '?'));
-        $this->wheres[] = "{$column} IN ({$placeholders})";
+        $this->wheres[] = ['boolean' => self::BOOLEAN_AND, 'sql' => "{$column} IN ({$placeholders})"];
         $this->bindings = array_merge($this->bindings, $values);
 
         return $this;
@@ -79,8 +91,8 @@ class QueryBuilder
 
     public function whereBetween(string $field, array $range): static
     {
-        $column = Utils::camelToSnake($field);
-        $this->wheres[] = "{$column} BETWEEN ? AND ?";
+        $column = $this->resolveColumn($field);
+        $this->wheres[] = ['boolean' => self::BOOLEAN_AND, 'sql' => "{$column} BETWEEN ? AND ?"];
         $this->bindings[] = $range[0];
         $this->bindings[] = $range[1];
 
@@ -89,23 +101,23 @@ class QueryBuilder
 
     public function whereNull(string $field): static
     {
-        $column = Utils::camelToSnake($field);
-        $this->wheres[] = "{$column} IS NULL";
+        $column = $this->resolveColumn($field);
+        $this->wheres[] = ['boolean' => self::BOOLEAN_AND, 'sql' => "{$column} IS NULL"];
 
         return $this;
     }
 
     public function whereNotNull(string $field): static
     {
-        $column = Utils::camelToSnake($field);
-        $this->wheres[] = "{$column} IS NOT NULL";
+        $column = $this->resolveColumn($field);
+        $this->wheres[] = ['boolean' => self::BOOLEAN_AND, 'sql' => "{$column} IS NOT NULL"];
 
         return $this;
     }
 
     public function orderBy(string $field, string $direction = 'asc'): static
     {
-        $column = Utils::camelToSnake($field);
+        $column = $this->resolveColumn($field);
         $dir = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
         $this->orderBys[] = "{$column} {$dir}";
 
@@ -233,34 +245,38 @@ class QueryBuilder
 
     private function buildWhereSql(): string
     {
+        $entityClass = $this->entityClass;
+        $hasSoftDelete = $entityClass::hasSoftDelete();
+
         if (empty($this->wheres)) {
-            $entityClass = $this->entityClass;
-            if ($entityClass::hasSoftDelete()) {
-                return ' WHERE deleted_at IS NULL';
-            }
-            return '';
+            return $hasSoftDelete ? ' WHERE deleted_at IS NULL' : '';
         }
 
-        $clauses = [];
-        $hasSoftDelete = $this->entityClass::hasSoftDelete();
+        $userPredicate = $this->joinUserPredicates();
 
         if ($hasSoftDelete) {
-            $clauses[] = 'deleted_at IS NULL';
+            // Always AND the soft-delete guard with the user's predicate group;
+            // parenthesize the user tree so an OR inside can't broaden the result
+            // to include soft-deleted rows.
+            return ' WHERE deleted_at IS NULL AND (' . $userPredicate . ')';
         }
 
-        foreach ($this->wheres as $i => $clause) {
-            if (str_starts_with($clause, 'OR ')) {
-                $clauses[] = $clause;
-            } else {
-                if (!empty($clauses)) {
-                    $clauses[] = "AND {$clause}";
-                } else {
-                    $clauses[] = $clause;
-                }
+        return ' WHERE ' . $userPredicate;
+    }
+
+    private function joinUserPredicates(): string
+    {
+        $parts = [];
+        foreach ($this->wheres as $index => $clause) {
+            if ($index === 0) {
+                // The first clause drops its boolean prefix — it's the root.
+                $parts[] = $clause['sql'];
+                continue;
             }
+            $parts[] = $clause['boolean'] . ' ' . $clause['sql'];
         }
 
-        return ' WHERE ' . implode(' ', $clauses);
+        return implode(' ', $parts);
     }
 
     private function getTable(): string
@@ -268,6 +284,66 @@ class QueryBuilder
         $entityClass = $this->entityClass;
 
         return $entityClass::getTableName();
+    }
+
+    private function resolveColumn(string $field): string
+    {
+        $column = Utils::camelToSnake($field);
+
+        if (!$this->isValidIdentifier($column)) {
+            throw new InvalidArgumentException(
+                "Invalid identifier [{$field}] — only alphanumeric and underscore characters are allowed."
+            );
+        }
+
+        return $column;
+    }
+
+    private function isValidIdentifier(string $identifier): bool
+    {
+        return (bool) preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $identifier);
+    }
+
+    /**
+     * Returns the list of DB column names backing this entity's public properties.
+     * `deleted_at` is always included since soft-delete is a library-level convention.
+     *
+     * Used by `APIDB::applySorting` / `applyFields` to reject identifiers
+     * coming from `?sort=` / `?fields=` that don't map to a real column.
+     *
+     * @return list<string>
+     */
+    public function getColumnAllowlist(): array
+    {
+        if ($this->columnAllowlist !== null) {
+            return $this->columnAllowlist;
+        }
+
+        $ref = new ReflectionClass($this->entityClass);
+        $columns = [];
+        foreach ($ref->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
+            $columns[] = Utils::camelToSnake($prop->getName());
+        }
+
+        if (!in_array('deleted_at', $columns, true)) {
+            $columns[] = 'deleted_at';
+        }
+
+        $this->columnAllowlist = $columns;
+
+        return $this->columnAllowlist;
+    }
+
+    private function assertOperator(string $operator): string
+    {
+        $allowed = ['=', '!=', '<>', '<', '<=', '>', '>=', 'LIKE', 'NOT LIKE'];
+        $normalized = strtoupper($operator);
+
+        if (!in_array($operator, $allowed, true) && !in_array($normalized, $allowed, true)) {
+            throw new InvalidArgumentException("Unsupported operator [{$operator}].");
+        }
+
+        return in_array($normalized, $allowed, true) ? $normalized : $operator;
     }
 
     private function eagerLoad(array $entities): void
