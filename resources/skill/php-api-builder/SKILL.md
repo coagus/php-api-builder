@@ -1,6 +1,6 @@
 ---
 name: php-api-builder
-description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). Trigger on: validation exception, entity not found exception, driver portability, RFC 7807 problem json, column allowlist, trusted proxies, CORS credentials, application/problem+json, ValidationException, EntityNotFoundException, per-route middleware, #[Middleware] attribute, #[Ignore] attribute, virtual property hook, password hash hook, set-only hook, foreign key idempotent, FK column suffix. This skill knows every pattern, attribute, and convention of the library."
+description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). Trigger on: validation exception, entity not found exception, driver portability, RFC 7807 problem json, column allowlist, trusted proxies, CORS credentials, application/problem+json, ValidationException, EntityNotFoundException, per-route middleware, #[Middleware] attribute, #[Ignore] attribute, virtual property hook, password hash hook, set-only hook, foreign key idempotent, FK column suffix, well-known routes, /.well-known/ path, JWKS, jwks.json, OpenID Connect discovery, openid-configuration, OAuth authorization server metadata, security.txt, RFC 8615, wellKnown argument, API constructor. This skill knows every pattern, attribute, and convention of the library."
 ---
 
 # PHP API Builder v2 - Development Skill
@@ -596,6 +596,25 @@ class Orders extends APIDB
 ```
 
 `#[Middleware]` must target a class that implements `MiddlewareInterface`; otherwise the dispatcher raises `RuntimeException` at resolution time — it never silently drops the declaration. Middleware for `Service` / `APIDB` subclasses is honored; a bare `Entity` gets wrapped in a generic `APIDB` at dispatch and its per-route attributes are picked up from there.
+
+## Well-known routes (RFC 8615)
+
+`API::__construct()` accepts an optional third argument for RFC 8615 `/.well-known/*` paths (JWKS, OpenID Connect discovery, security.txt) outside `$apiPrefix`.
+
+```php
+$api = new API(
+    namespace: 'App\\Services',
+    apiPrefix: '/api/v1',
+    wellKnown: [
+        '/.well-known/jwks.json'             => [Jwk::class, 'get'],
+        '/.well-known/openid-configuration'  => [OpenIdConfig::class, 'get'],
+    ]
+);
+```
+
+Each value is a `[Class::class, 'method']` tuple. The class is a regular `Service`; its method writes the response with `$this->success(...)`. Mark it `#[PublicResource]` if the global auth middleware would challenge the request. The `wellKnown` lookup runs before `apiPrefix` matching, global middleware still runs, and per-route `#[Middleware]` does not. Malformed entries throw `InvalidArgumentException` at construction time. Omitting the argument preserves previous behavior.
+
+See `references/well-known-routes.md` for the canonical handler, RFC 7517 JWKS envelope variations, and the discovery-endpoint table.
 
 ## Transactions
 

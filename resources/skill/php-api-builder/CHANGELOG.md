@@ -4,6 +4,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/) and [SemVer](https://sem
 
 This log tracks changes to the library-shipped skill at `resources/skill/php-api-builder/SKILL.md`, consumed by Claude agents building APIs with `coagus/php-api-builder` v2.
 
+## [2.2.0] - 2026-04-18
+
+Backward-compatible additions reflecting library changes shipped in `v2.0.0-alpha.23`.
+
+### Added
+
+- New top-level section **Well-known routes (RFC 8615)** covering the `wellKnown` argument on `API::__construct()` — maps `/.well-known/*` paths to `[Class, method]` tuples so JWKS, OpenID Connect discovery, OAuth 2.0 authorization-server metadata, and `security.txt` can be served outside `$apiPrefix`.
+- New reference file `references/well-known-routes.md` with the canonical handler, fail-fast validation rules, RFC 7517 JWKS envelope variants (`data`-wrapped vs plain `{"keys": [...]}` with `application/jwk-set+json`), dispatch semantics (middleware implications), and a table of common discovery endpoints.
+
+### Changed
+
+- Skill description now triggers on: `well-known routes`, `/.well-known/ path`, `JWKS`, `jwks.json`, `OpenID Connect discovery`, `openid-configuration`, `OAuth authorization server metadata`, `security.txt`, `RFC 8615`, `wellKnown argument`, `API constructor`. Downstream agents asking about any of these now auto-load the skill.
+
+### Fixed
+
+- No fixes; additive release.
+
+### Notes on skill size
+
+SKILL.md grew from 799 → 818 lines (target 800, hard cap 1200 per `.claude/skills/skill-curator/SKILL.md`). The detailed content lives in `references/well-known-routes.md`, keeping the SKILL entry at the "compact pattern + pointer" level.
+
 ## [2.1.0] - 2026-04-18
 
 Backward-compatible additions reflecting library changes shipped in `v2.0.0-alpha.22`.
