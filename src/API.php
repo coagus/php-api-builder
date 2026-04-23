@@ -21,11 +21,24 @@ class API
     private Router $router;
     private array $middlewareClasses = [];
     private string $requestId;
+    /** @var array<string, array{0: class-string, 1: string}> */
+    private readonly array $wellKnownRoutes;
 
+    /**
+     * @param array<string, array{0: class-string, 1: string}> $wellKnown
+     *     Map of raw request paths (outside $apiPrefix) to [class, method] tuples.
+     *     Consulted before the Router, enabling RFC 8615 well-known URLs such as
+     *     `/.well-known/jwks.json` and OpenID Connect discovery documents.
+     *
+     * @throws \InvalidArgumentException if any tuple is malformed, the class does
+     *     not exist, or the method is not callable on an instance of that class.
+     */
     public function __construct(
         private readonly string $namespace,
-        private readonly string $apiPrefix = '/api/v1'
+        private readonly string $apiPrefix = '/api/v1',
+        array $wellKnown = []
     ) {
+        $this->wellKnownRoutes = self::normalizeWellKnown($wellKnown);
         $this->router = new Router($namespace, $apiPrefix);
         $this->requestId = $this->generateRequestId();
     }
@@ -72,6 +85,12 @@ class API
 
     private function dispatch(Request $request): Response
     {
+        // Well-known routes (RFC 8615) — consulted before apiPrefix matching.
+        $wellKnownResponse = $this->handleWellKnown($request);
+        if ($wellKnownResponse !== null) {
+            return $wellKnownResponse;
+        }
+
         // Built-in docs route
         $docsResponse = $this->handleDocs($request);
         if ($docsResponse !== null) {
@@ -159,6 +178,39 @@ class API
         return $response;
     }
 
+    private function handleWellKnown(Request $request): ?Response
+    {
+        if ($this->wellKnownRoutes === []) {
+            return null;
+        }
+
+        $path = rtrim($request->getPath(), '/');
+        if ($path === '') {
+            $path = '/';
+        }
+
+        if (!isset($this->wellKnownRoutes[$path])) {
+            return null;
+        }
+
+        [$class, $method] = $this->wellKnownRoutes[$path];
+        $handler = new $class();
+
+        if ($handler instanceof Resource) {
+            $handler->setRequest($request);
+            $handler->setResourceId(null);
+            $handler->setAction(null);
+
+            return $this->invokeHandler($handler, $method);
+        }
+
+        $result = $handler->{$method}($request);
+
+        return $result instanceof Response
+            ? $result
+            : new Response(['data' => $result], 200);
+    }
+
     private function handleDocs(Request $request): ?Response
     {
         if ($request->getMethod() !== 'GET') {
@@ -233,5 +285,56 @@ class API
     private function generateRequestId(): string
     {
         return bin2hex(random_bytes(8));
+    }
+
+    /**
+     * Validate the $wellKnown map fail-fast at construction time.
+     *
+     * @param array<string, array{0: class-string, 1: string}> $wellKnown
+     *
+     * @return array<string, array{0: class-string, 1: string}>
+     *
+     * @throws \InvalidArgumentException
+     */
+    private static function normalizeWellKnown(array $wellKnown): array
+    {
+        $normalized = [];
+        foreach ($wellKnown as $path => $tuple) {
+            self::assertWellKnownEntry($path, $tuple);
+            $normalized[rtrim((string) $path, '/') ?: '/'] = [$tuple[0], $tuple[1]];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @throws \InvalidArgumentException
+     */
+    private static function assertWellKnownEntry(mixed $path, mixed $tuple): void
+    {
+        if (!is_string($path) || $path === '' || $path[0] !== '/') {
+            throw new \InvalidArgumentException(
+                'wellKnown paths must be non-empty strings starting with "/".'
+            );
+        }
+
+        if (!is_array($tuple) || !array_is_list($tuple) || count($tuple) !== 2) {
+            throw new \InvalidArgumentException(
+                "wellKnown['{$path}'] must be a [Class::class, 'method'] tuple."
+            );
+        }
+
+        [$class, $method] = $tuple;
+        if (!is_string($class) || !class_exists($class)) {
+            throw new \InvalidArgumentException(
+                "wellKnown['{$path}']: class '" . (is_string($class) ? $class : gettype($class)) . "' does not exist."
+            );
+        }
+
+        if (!is_string($method) || !method_exists($class, $method)) {
+            throw new \InvalidArgumentException(
+                "wellKnown['{$path}']: method '" . (is_string($method) ? $method : gettype($method)) . "' is not callable on {$class}."
+            );
+        }
     }
 }
