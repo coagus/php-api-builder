@@ -494,6 +494,20 @@ La URL define la operación automáticamente:
 | /api/v1/users/1 | DELETE | delete() | APIDB.delete() → Entity.delete(1) |
 | /api/v1/users/1/activate | POST | postActivate() | User.postActivate() (custom) |
 
+##### URL shapes soportados por `Router::parsePath`
+
+A partir de `v2.0.0-alpha.24` el parser del router preserva el 3er segmento cuando el 2do es no-numérico (fix UI-005). Las cinco formas canónicas son:
+
+| Shape | Ejemplo | `resource` | `id` | `action` | Handler típico |
+|-------|---------|-----------|------|----------|----------------|
+| (a) `/resource` | `/api/v1/users` | `users` | `null` | `null` | `get()` / `post()` |
+| (b) `/resource/{id}` | `/api/v1/users/42` | `users` | `"42"` | `null` | `get()` / `put()` / `patch()` / `delete()` sobre el id |
+| (c) `/resource/{id}/action` | `/api/v1/users/42/roles` | `users` | `"42"` | `"roles"` | `postRoles()` / `getRoles()` |
+| (d) `/resource/action` | `/api/v1/users/login` | `users` | `null` | `"login"` | `postLogin()` |
+| (e) `/resource/action/{id}` | `/api/v1/me/sessions/123` | `me` | `"123"` | `"sessions"` | `deleteSessions()` con `$this->resourceId === "123"` |
+
+La forma (e) cubre el caso canónico "operar sobre un recurso del caller" — por ejemplo `DELETE /api/v1/me/sessions/{id}` para cerrar una sesión propia. Antes de alpha.24 el 3er segmento se descartaba silenciosamente y el handler recibía `$this->resourceId = null`, forzando re-parseo manual del path; el fix de alpha.24 preserva ese segmento como `id` sin tocar la firma pública del `Router`.
+
 #### Atributos PHP Existentes
 
 - `#[PublicResource]` — Marca clase o método como público (sin auth)
