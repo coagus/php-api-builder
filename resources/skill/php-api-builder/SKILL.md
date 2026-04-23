@@ -1,6 +1,6 @@
 ---
 name: php-api-builder
-description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). Trigger on: validation exception, entity not found exception, driver portability, RFC 7807 problem json, column allowlist, trusted proxies, CORS credentials, application/problem+json, ValidationException, EntityNotFoundException, per-route middleware, #[Middleware] attribute, #[Ignore] attribute, virtual property hook, password hash hook, set-only hook, foreign key idempotent, FK column suffix, well-known routes, /.well-known/ path, JWKS, jwks.json, OpenID Connect discovery, openid-configuration, OAuth authorization server metadata, security.txt, RFC 8615, wellKnown argument, API constructor. This skill knows every pattern, attribute, and convention of the library."
+description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). Trigger on: validation exception, entity not found exception, driver portability, RFC 7807 problem json, column allowlist, trusted proxies, CORS credentials, application/problem+json, ValidationException, EntityNotFoundException, per-route middleware, #[Middleware] attribute, #[Ignore] attribute, virtual property hook, password hash hook, set-only hook, foreign key idempotent, FK column suffix, well-known routes, /.well-known/ path, JWKS, jwks.json, OpenID Connect discovery, openid-configuration, OAuth authorization server metadata, security.txt, RFC 8615, wellKnown argument, API constructor, nested action route, /resource/action/{id}, self-service endpoint, /me/sessions/{id}, Router parsePath, URL shape, resourceId in custom action, third URL segment. This skill knows every pattern, attribute, and convention of the library."
 ---
 
 # PHP API Builder v2 - Development Skill
@@ -239,6 +239,85 @@ class UserService extends APIDB
 ```
 
 Method naming convention for custom endpoints: `{httpMethod}{Action}` -> maps to `{METHOD} /api/v1/{resource}/{action}`
+
+## URL Shapes and Routing
+
+`Router::parsePath` classifies every request into one of five canonical shapes and hands the pieces to the handler as `$this->resourceId` (string or null) and `$this->action` (string or null). The shapes are:
+
+| Shape | Example URL | resource | id | action | Invoked method |
+|-------|-------------|----------|-----|--------|----------------|
+| (a) `/resource` | `GET /api/v1/users` | `users` | `null` | `null` | `get()` |
+| (b) `/resource/{id}` | `GET /api/v1/users/42` | `users` | `"42"` | `null` | `get()` (id in `$this->resourceId`) |
+| (c) `/resource/{id}/action` | `POST /api/v1/users/42/roles` | `users` | `"42"` | `"roles"` | `postRoles()` |
+| (d) `/resource/action` | `POST /api/v1/users/login` | `users` | `null` | `"login"` | `postLogin()` |
+| (e) `/resource/action/{id}` | `DELETE /api/v1/me/sessions/123` | `me` | `"123"` | `"sessions"` | `deleteSessions()` (id in `$this->resourceId`) |
+
+Shape (e) is the canonical "self-service on a specific sub-resource": acting on one item belonging to the caller without re-exposing ids in the top-level collection. It was added in `v2.0.0-alpha.24` (UI-005); prior versions silently dropped the 3rd segment whenever the 2nd was non-numeric.
+
+### Worked example: `DELETE /api/v1/me/sessions/{id}` (shape e)
+
+Typical handler for closing one of the caller's own sessions:
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Entities\Session;
+use Coagus\PhpApiBuilder\Auth\Auth;
+use Coagus\PhpApiBuilder\Resource\Service;
+
+class Me extends Service
+{
+    // DELETE /api/v1/me/sessions/{id}
+    // shape (e): resource="me", action="sessions", id from segment 3
+    public function deleteSessions(): void
+    {
+        $sessionId = $this->resourceId;
+        if ($sessionId === null) {
+            $this->error('Session id is required', 400);
+            return;
+        }
+
+        $callerId = Auth::currentUserId();
+        $session  = Session::find((int) $sessionId);
+
+        if ($session === null || $session->user_id !== $callerId) {
+            // Do not leak existence of other users' sessions.
+            $this->error('Not Found', 404);
+            return;
+        }
+
+        $session->delete();
+        $this->noContent();
+    }
+
+    // DELETE /api/v1/me/sessions   (shape d — no id)
+    // Closes every session owned by the caller.
+    public function deleteSessions__all(): void
+    {
+        // Use a different method name if both shapes (d) and (e) apply.
+        // Alternative: branch inside deleteSessions() on $this->resourceId === null.
+    }
+}
+```
+
+If a single endpoint handler must serve both shape (d) and shape (e), branch on `$this->resourceId`:
+
+```php
+public function deleteSessions(): void
+{
+    if ($this->resourceId === null) {
+        // shape (d): /me/sessions  → close all of the caller's sessions
+    } else {
+        // shape (e): /me/sessions/{id}  → close one specific session
+    }
+}
+```
+
+### Choosing between shape (c) and shape (e)
+
+Shape (c) (`/users/{id}/roles`) anchors the sub-collection to a specific owner, used by admin-style URLs. Shape (e) (`/me/sessions/{id}`) anchors the action under a logical "current caller" root, used for self-service. Both are first-class.
 
 ## Query Builder - 5 Levels
 

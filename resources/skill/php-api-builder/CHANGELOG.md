@@ -4,6 +4,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/) and [SemVer](https://sem
 
 This log tracks changes to the library-shipped skill at `resources/skill/php-api-builder/SKILL.md`, consumed by Claude agents building APIs with `coagus/php-api-builder` v2.
 
+## [2.3.0] - 2026-04-23
+
+Backward-compatible additions reflecting library changes shipped in `v2.0.0-alpha.24`.
+
+### Added
+
+- New top-level section **URL Shapes and Routing** listing the five canonical URL shapes `Router::parsePath` now supports, with a table mapping each shape to the resulting `resource` / `id` / `action` triple and the dispatched method. Shape (e) — `/resource/action/{id}` — is new as of `v2.0.0-alpha.24` (UI-005); prior versions silently dropped the 3rd segment whenever the 2nd was non-numeric, making `DELETE /api/v1/me/sessions/{id}` unroutable.
+- Worked example: `DELETE /api/v1/me/sessions/{id}` handler reading `$this->resourceId` after the router classifies the request as shape (e). Includes ownership enforcement (`$session->user_id !== Auth::currentUserId()` → 404, not 403, to avoid leaking existence) and the dual-shape branch pattern when a single handler must serve both `/me/sessions` (close all) and `/me/sessions/{id}` (close one).
+- Short note distinguishing shape (c) `/users/{id}/roles` (admin-style, owner in 2nd segment) from shape (e) `/me/sessions/{id}` (self-service, caller implicit).
+
+### Changed
+
+- Skill description triggers now include: `nested action route`, `/resource/action/{id}`, `self-service endpoint`, `/me/sessions/{id}`, `Router parsePath`, `URL shape`, `resourceId in custom action`, `third URL segment`. Downstream agents asking about any of these auto-load the skill.
+
+### Fixed
+
+- No fixes; additive release documenting a library fix.
+
+### Notes on skill size
+
+SKILL.md grew from 818 → 897 lines (target 800, hard cap 1200 per `.claude/skills/skill-curator/SKILL.md`). Worked example is kept minimal and lives inline because the pattern is short; if the routing surface grows (Option B promotion of `#[Route]` to first-class) we extract to `references/routing.md`.
+
 ## [2.2.0] - 2026-04-18
 
 Backward-compatible additions reflecting library changes shipped in `v2.0.0-alpha.23`.
