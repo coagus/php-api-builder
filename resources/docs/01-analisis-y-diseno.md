@@ -1497,24 +1497,50 @@ class User extends APIDB {
 }
 ```
 
+#### Tipo 4: Rutas Well-Known (fuera del `apiPrefix`)
+
+Algunas convenciones de internet reservan paths host-level que viven fuera del prefijo de la API: [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) `/.well-known/*` (JWKS, OpenID Connect discovery, OAuth 2.0 authorization-server metadata, `security.txt`). El router convencional rechaza estos paths porque no empiezan con `$apiPrefix`.
+
+Para habilitarlos, `API::__construct()` acepta un tercer argumento `array $wellKnown = []` que mapea paths crudos a tuplas `[Class::class, 'method']`. La validación del mapa es fail-fast: si la clase no existe o el método no es invocable en una instancia de esa clase, el constructor lanza `InvalidArgumentException` antes de aceptar ningún request.
+
+```php
+$api = new API(
+    namespace: 'App\\Services',
+    apiPrefix: '/api/v1',
+    wellKnown: [
+        '/.well-known/jwks.json'             => [Jwk::class, 'get'],
+        '/.well-known/openid-configuration'  => [OpenIdConfig::class, 'get'],
+    ]
+);
+```
+
+El dispatcher consulta `wellKnown` antes del matching del `apiPrefix`, así que estos paths resuelven sin tocar el router. Los handlers son `Service` normales; los middlewares globales (CORS, security headers, rate limit) siguen corriendo, pero los `#[Middleware]` per-route no aplican (la ruta no pasa por `MiddlewareResolver`). Los paths well-known no se publican en el OpenAPI auto-generado, que describe únicamente los recursos bajo `$apiPrefix`.
+
 #### Flujo de Resolución del Router
 
 ```
-URL recibida: /api/v1/{resource}
+URL recibida
     │
     ▼
-¿Existe clase Service para {resource}?
+¿Está el path en el mapa $wellKnown?
     │
-    ├── SÍ → ¿Extiende APIDB?
-    │         ├── SÍ → Tipo 3 (Híbrido): CRUD + custom methods
-    │         └── NO → Tipo 2 (Service puro): solo custom methods
+    ├── SÍ → Tipo 4 (Well-Known): invoca tupla [Class, method] registrada
     │
-    └── NO → ¿Existe clase Entity para {resource}?
-              ├── SÍ → Tipo 1 (Entity): CRUD automático vía APIDB
-              └── NO → Error 404: Resource not found
+    └── NO → ¿Empieza con $apiPrefix? (default /api/v1)
+              │
+              ├── NO → Error 404
+              └── SÍ → ¿Existe clase Service para {resource}?
+                        │
+                        ├── SÍ → ¿Extiende APIDB?
+                        │         ├── SÍ → Tipo 3 (Híbrido): CRUD + custom methods
+                        │         └── NO → Tipo 2 (Service puro): solo custom methods
+                        │
+                        └── NO → ¿Existe clase Entity para {resource}?
+                                  ├── SÍ → Tipo 1 (Entity): CRUD automático vía APIDB
+                                  └── NO → Error 404: Resource not found
 ```
 
-**Esto ya funciona en v1** (el `getClass()` en utils.php hace este descubrimiento). En v2 lo formalizamos con mejor documentación, tipado e interfaz.
+**Esto ya funciona en v1** (el `getClass()` en utils.php hace este descubrimiento). En v2 lo formalizamos con mejor documentación, tipado e interfaz, y el soporte de well-known se agrega en `v2.0.0-alpha.23` para desbloquear JWKS y OpenID Connect discovery (issue upstream [#4](https://github.com/coagus/php-api-builder/issues/4)).
 
 ### 4.11 Capa de Base de Datos — PDO Multi-Driver
 

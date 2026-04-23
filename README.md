@@ -199,6 +199,36 @@ class Health extends Service
 }
 ```
 
+## Well-known routes (RFC 8615)
+
+Not every URL belongs under `/api/v1`. RFC 8615 reserves the `/.well-known/*` namespace for host-level metadata: OpenID Connect discovery, OAuth 2.0 authorization-server metadata, JWKS, `security.txt`, and similar. Register these paths with the optional third constructor argument:
+
+```php
+use Coagus\PhpApiBuilder\API;
+use App\Services\Jwk;
+use App\Services\OpenIdConfig;
+
+$api = new API(
+    namespace: 'App\\Services',
+    apiPrefix: '/api/v1',
+    wellKnown: [
+        '/.well-known/jwks.json'             => [Jwk::class, 'get'],
+        '/.well-known/openid-configuration'  => [OpenIdConfig::class, 'get'],
+    ]
+);
+
+$api->run()->send();
+```
+
+The dispatcher consults the `wellKnown` map before the `apiPrefix` router, so these paths resolve regardless of the prefix value. Each handler is a regular `Service` (extends `Coagus\PhpApiBuilder\Resource\Service`) — its `get()` method writes a response with `$this->success(...)` exactly like any other service.
+
+Malformed entries fail fast at construction time. If the class does not exist, the method is not callable on an instance of that class, or the tuple is not `[Class::class, 'method']`, the `API` constructor throws `InvalidArgumentException` before any request is served.
+
+A few notes:
+- Global middleware registered via `API::middleware([...])` (CORS, security headers, rate limit) still runs for well-known routes. Per-route `#[Middleware]` attributes are not applied — these endpoints are handled outside the router's class-discovery path.
+- Well-known paths are deliberately **not** emitted in the auto-generated OpenAPI document, which only describes `$apiPrefix`-scoped resources.
+- The `wellKnown` map is optional. Omitting it preserves the exact behavior of previous releases.
+
 ## Hybrid Resources (CRUD + Custom Endpoints)
 
 Combine automatic CRUD with custom business logic:
