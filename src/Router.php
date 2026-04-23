@@ -70,20 +70,21 @@ class Router
 
         $segments = explode('/', $relative);
         $resource = $segments[0];
-        $id = $segments[1] ?? null;
-        $action = $segments[2] ?? null;
+        $second = $segments[1] ?? null;
+        $third = $segments[2] ?? null;
 
-        // If second segment is not numeric, it's an action not an ID
-        if ($id !== null && !is_numeric($id)) {
-            $action = $id;
-            $id = null;
+        if ($second === null) {
+            return ['resource' => $resource, 'id' => null, 'action' => null];
         }
 
-        return [
-            'resource' => $resource,
-            'id' => $id,
-            'action' => $action,
-        ];
+        // Numeric 2nd segment: /users/42 or /users/42/orders
+        if (is_numeric($second)) {
+            return ['resource' => $resource, 'id' => $second, 'action' => $third];
+        }
+
+        // Non-numeric 2nd segment is an action; 3rd (if any) is the id for it.
+        // e.g. /me/sessions/123 → action=sessions, id=123 (UI-005 fix).
+        return ['resource' => $resource, 'id' => $third, 'action' => $second];
     }
 
     public function resolveMethod(string $httpMethod, ?string $action, string $class): ?string
