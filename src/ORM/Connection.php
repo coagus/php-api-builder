@@ -40,8 +40,37 @@ class Connection
 
     public static function configure(array $config): void
     {
-        self::$config = $config;
+        self::$config = self::normalize($config);
         self::$instance = null;
+    }
+
+    /**
+     * Expand a `dsn` URI key (postgresql://user:pass@host:port/db, etc.) into
+     * the individual fields the drivers consume. Any field the caller already
+     * provided alongside `dsn` takes precedence over the parsed value, so an
+     * explicit override always wins.
+     *
+     * @param array<string,mixed> $config
+     * @return array<string,mixed>
+     */
+    private static function normalize(array $config): array
+    {
+        if (!isset($config['dsn']) || !is_string($config['dsn']) || $config['dsn'] === '') {
+            return $config;
+        }
+
+        if (!DsnParser::looksLikeUri($config['dsn'])) {
+            // Not a URI — leave the raw `dsn` alone for callers that want to
+            // pass a PDO-native DSN string in the future. Today the drivers
+            // ignore the `dsn` key, so this is a no-op.
+            return $config;
+        }
+
+        $parsed = DsnParser::parse($config['dsn']);
+        unset($config['dsn']);
+
+        // Caller-provided keys override URI-parsed ones.
+        return array_replace($parsed, $config);
     }
 
     public static function getInstance(): self
