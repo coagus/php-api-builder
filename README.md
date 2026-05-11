@@ -404,6 +404,20 @@ DB_PASSWORD=secret
 
 The ORM generates driver-specific SQL through PDO. Switch databases by changing one line.
 
+### Connection URIs (Supabase, RDS, Heroku, Render, …)
+
+Managed Postgres and MySQL hosts publish credentials as a single URI. Pass it directly to `Connection::configure()` under the `dsn` key and the library expands it into the individual fields:
+
+```php
+use Coagus\PhpApiBuilder\ORM\Connection;
+
+Connection::configure([
+    'dsn' => $_ENV['DATABASE_URL'] ?? 'postgresql://alice:s3cret@db.example.com:6543/postgres',
+]);
+```
+
+Supported schemes: `postgresql://`, `postgres://`, `mysql://`, `mariadb://`. URL-decoded credentials, default ports (5432 / 3306), and query-string options (e.g. `?sslmode=require`) are dropped — libpq and the MySQL driver negotiate TLS automatically against any TLS-enforcing server. Caller-provided fields override URI-parsed ones, so `['dsn' => '...', 'database' => 'override']` wins.
+
 ## Security
 
 Built-in by default, following OWASP recommendations:
