@@ -4,6 +4,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/) and [SemVer](https://sem
 
 This log tracks changes to the library-shipped skill at `resources/skill/php-api-builder/SKILL.md`, consumed by Claude agents building APIs with `coagus/php-api-builder` v2.
 
+## [2.4.0] - 2026-05-10
+
+Backward-compatible additions reflecting library changes shipped in `v2.0.0-alpha.25`.
+
+### Added
+
+- New subsection **Connection URIs (managed hosts)** under "Database Drivers" documenting the new `dsn` key on `Connection::configure()`. Passing a libpq/MySQL URI (`postgresql://`, `postgres://`, `mysql://`, `mariadb://`) expands it into the field map drivers already consume — no need to parse `DATABASE_URL` by hand when integrating with Supabase, RDS, Heroku, Render, or Cloud SQL.
+- Documented contract: URL-decoded credentials, default ports (5432 / 3306), query-string options intentionally dropped (TLS is negotiated automatically), caller-provided keys override URI-parsed ones, unsupported schemes throw `InvalidArgumentException` at configure-time, IPv6 literal hosts not yet supported.
+
+### Changed
+
+- Skill description triggers now include: `connection URI`, `DATABASE_URL`, `postgresql:// scheme`, `postgres:// scheme`, `mysql:// scheme`, `mariadb:// scheme`, `libpq URI`, `Supabase connection string`, `RDS connection string`, `Heroku DATABASE_URL`, `Render Postgres`, `Cloud SQL URI`, `dsn key in Connection::configure`, `DsnParser`. Downstream agents asking about any of these auto-load the skill.
+
+### Fixed
+
+- No fixes; additive release documenting a library feature.
+
+### Notes on skill size
+
+SKILL.md grew from 897 → ~922 lines (target 800, hard cap 1200 per `.claude/skills/skill-curator/SKILL.md`). The URI contract is short and inline because it is essentially configuration; if URI handling grows (IPv6, sslmode passthrough, custom query options) extract to `references/connection-uris.md`.
+
 ## [2.3.0] - 2026-04-23
 
 Backward-compatible additions reflecting library changes shipped in `v2.0.0-alpha.24`.

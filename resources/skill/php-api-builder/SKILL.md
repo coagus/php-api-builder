@@ -1,6 +1,6 @@
 ---
 name: php-api-builder
-description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). Trigger on: validation exception, entity not found exception, driver portability, RFC 7807 problem json, column allowlist, trusted proxies, CORS credentials, application/problem+json, ValidationException, EntityNotFoundException, per-route middleware, #[Middleware] attribute, #[Ignore] attribute, virtual property hook, password hash hook, set-only hook, foreign key idempotent, FK column suffix, well-known routes, /.well-known/ path, JWKS, jwks.json, OpenID Connect discovery, openid-configuration, OAuth authorization server metadata, security.txt, RFC 8615, wellKnown argument, API constructor, nested action route, /resource/action/{id}, self-service endpoint, /me/sessions/{id}, Router parsePath, URL shape, resourceId in custom action, third URL segment. This skill knows every pattern, attribute, and convention of the library."
+description: "Development assistant for building RESTful APIs with the coagus/php-api-builder v2 library. Use this skill whenever the user mentions php-api-builder, wants to create PHP API entities, services, middleware, authentication with JWT, query building, or any task related to building a REST API using this Composer package. Also trigger when the user asks about creating CRUD endpoints, defining database entities with PHP attributes, configuring API routing, or setting up ORM relationships (BelongsTo, HasMany, BelongsToMany). Trigger on: validation exception, entity not found exception, driver portability, RFC 7807 problem json, column allowlist, trusted proxies, CORS credentials, application/problem+json, ValidationException, EntityNotFoundException, per-route middleware, #[Middleware] attribute, #[Ignore] attribute, virtual property hook, password hash hook, set-only hook, foreign key idempotent, FK column suffix, well-known routes, /.well-known/ path, JWKS, jwks.json, OpenID Connect discovery, openid-configuration, OAuth authorization server metadata, security.txt, RFC 8615, wellKnown argument, API constructor, nested action route, /resource/action/{id}, self-service endpoint, /me/sessions/{id}, Router parsePath, URL shape, resourceId in custom action, third URL segment, connection URI, DATABASE_URL, postgresql:// scheme, postgres:// scheme, mysql:// scheme, mariadb:// scheme, libpq URI, Supabase connection string, RDS connection string, Heroku DATABASE_URL, Render Postgres, Cloud SQL URI, dsn key in Connection::configure, DsnParser. This skill knows every pattern, attribute, and convention of the library."
 ---
 
 # PHP API Builder v2 - Development Skill
@@ -737,6 +737,26 @@ DB_PASSWORD=secret
 DB_DRIVER=sqlite
 DB_DATABASE=/path/to/database.sqlite
 ```
+
+### Connection URIs (managed hosts)
+
+Managed Postgres / MySQL hosts (Supabase, RDS, Heroku, Render, Cloud SQL, …) publish credentials as a single URI. Pass it under the `dsn` key and `Connection::configure()` expands it into the field map drivers consume:
+
+```php
+Connection::configure([
+    'dsn' => $_ENV['DATABASE_URL'], // e.g. postgresql://alice:s%40cret@db.example.com:6543/postgres
+]);
+```
+
+Behavior contract (per `DsnParser`):
+
+- Schemes recognised: `postgresql://`, `postgres://`, `mysql://`, `mariadb://`. Anything else throws `InvalidArgumentException` at `configure()` time — fail fast, do not silently fall back.
+- Username and password are URL-decoded once (Supabase passwords routinely contain `@`, `:`, `/`, `+` which **must** be percent-encoded in the URI).
+- Default ports: `5432` for `postgres*`, `3306` for `mysql`/`mariadb`. Explicit port wins.
+- Query-string options are intentionally dropped (`?sslmode=require`, `?application_name=…`) — libpq and the MySQL driver negotiate TLS automatically against any TLS-enforcing server, and propagating `sslmode=require` into a local Docker Postgres without TLS would break development. Re-introduce specific options only when a real consumer needs them.
+- Caller-provided keys override URI-parsed ones, so `['dsn' => '...', 'database' => 'override']` keeps the URI's host/credentials but swaps the database name. This is how tests force `:memory:` while still validating the URI happy-path.
+- Configs without a `dsn` key, or with a non-URI `dsn` (e.g. a future PDO-native DSN string), pass through unchanged — 100% backward compatible with the per-field configuration above.
+- IPv6 literal hosts (`postgres://user:pass@[::1]:5432/db`) are not yet supported; fall back to per-field config for those.
 
 ### Automatic session settings per driver
 
