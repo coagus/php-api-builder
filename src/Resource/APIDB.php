@@ -168,6 +168,28 @@ abstract class APIDB extends Resource
 
         foreach ($filter as $field => $value) {
             $camelField = Utils::snakeToCamel($field);
+
+            // Comparison / range form: filter[field][op]=value, where op is
+            // one of eq|ne|gt|gte|lt|lte|like. Enables date ranges and
+            // open intervals (e.g. ?filter[createdAt][gte]=2026-05-01)
+            // without each consumer hand-coding a custom endpoint.
+            // Unknown operators are ignored (not a 500) so a typo on the
+            // client degrades to "filter not applied", never an error.
+            if (is_array($value)) {
+                foreach ($value as $op => $opValue) {
+                    $sqlOp = self::FILTER_OPERATORS[strtolower((string) $op)] ?? null;
+                    if ($sqlOp === null) {
+                        continue;
+                    }
+                    if ($sqlOp === 'LIKE') {
+                        $opValue = '%' . $opValue . '%';
+                    }
+                    $query->where($camelField, $sqlOp, $opValue);
+                }
+                continue;
+            }
+
+            // Scalar form (unchanged — backward compatible).
             if ($value === 'true') {
                 $query->where($camelField, 1);
             } elseif ($value === 'false') {
@@ -179,6 +201,17 @@ abstract class APIDB extends Resource
             }
         }
     }
+
+    /** URL filter operator → SQL operator. Whitelisted; see assertOperator. */
+    private const FILTER_OPERATORS = [
+        'eq'   => '=',
+        'ne'   => '<>',
+        'gt'   => '>',
+        'gte'  => '>=',
+        'lt'   => '<',
+        'lte'  => '<=',
+        'like' => 'LIKE',
+    ];
 
     private function applySorting(QueryBuilder $query, array $params): void
     {

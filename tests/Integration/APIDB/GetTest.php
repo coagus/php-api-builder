@@ -80,6 +80,65 @@ test('GET list with filters', function () {
     expect($body['meta']['total'])->toBe(4); // All active users
 });
 
+test('GET list range filter: filter[id][gte] returns the open interval', function () {
+    $handler = createApidb(TestUserApidb::class, 'GET', '/api/v1/users?filter[id][gte]=3');
+    $handler->get();
+    $body = $handler->getResponse()->getBody();
+
+    expect($body['meta']['total'])->toBe(3); // ids 3,4,5
+});
+
+test('GET list range filter: gte + lte form a closed range', function () {
+    $handler = createApidb(TestUserApidb::class, 'GET', '/api/v1/users?filter[id][gte]=2&filter[id][lte]=4');
+    $handler->get();
+    $body = $handler->getResponse()->getBody();
+
+    expect($body['meta']['total'])->toBe(3); // ids 2,3,4
+});
+
+test('GET list range filter: gt is strict', function () {
+    $handler = createApidb(TestUserApidb::class, 'GET', '/api/v1/users?filter[id][gt]=4');
+    $handler->get();
+    $body = $handler->getResponse()->getBody();
+
+    expect($body['meta']['total'])->toBe(1) // id 5 only
+        ->and($body['data'][0]['name'])->toBe('Eve');
+});
+
+test('GET list range filter: ne excludes', function () {
+    $handler = createApidb(TestUserApidb::class, 'GET', '/api/v1/users?filter[id][ne]=1');
+    $handler->get();
+    $body = $handler->getResponse()->getBody();
+
+    expect($body['meta']['total'])->toBe(4);
+});
+
+test('GET list filter: like wraps in wildcards (substring match)', function () {
+    $handler = createApidb(TestUserApidb::class, 'GET', '/api/v1/users?filter[name][like]=li');
+    $handler->get();
+    $body = $handler->getResponse()->getBody();
+
+    // "Alice" and "Charlie" both contain "li".
+    expect($body['meta']['total'])->toBe(2);
+});
+
+test('GET list filter: unknown operator is ignored, not a 500', function () {
+    $handler = createApidb(TestUserApidb::class, 'GET', '/api/v1/users?filter[id][bogus]=3');
+    $handler->get();
+    $response = $handler->getResponse();
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($response->getBody()['meta']['total'])->toBe(5); // filter not applied
+});
+
+test('GET list filter: scalar form still works (backward compatible)', function () {
+    $handler = createApidb(TestUserApidb::class, 'GET', '/api/v1/users?filter[active]=true');
+    $handler->get();
+    $body = $handler->getResponse()->getBody();
+
+    expect($body['meta']['total'])->toBe(4);
+});
+
 test('GET list with sparse fields', function () {
     $handler = createApidb(TestUserApidb::class, 'GET', '/api/v1/users?fields=id,name');
     $handler->get();
