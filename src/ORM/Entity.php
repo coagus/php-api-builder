@@ -359,6 +359,8 @@ abstract class Entity
             } else {
                 $this->{$pk} = $castedId;
             }
+
+            $this->refreshFromDatabase();
         }
     }
 
@@ -381,6 +383,61 @@ abstract class Entity
             "UPDATE {$table} SET {$sets} WHERE {$pkColumn} = ?",
             $values
         );
+
+        $this->refreshFromDatabase();
+    }
+
+    /**
+     * Releer la fila de la DB y volcar los valores a `$this`. Lo usamos
+     * después de insert/update para que campos generados por la DB
+     * (defaults como `created_at`, triggers que tocan `updated_at`,
+     * columnas computadas) queden visibles en la respuesta sin que el
+     * caller tenga que hacer un fetch extra.
+     *
+     * Hace un SELECT plano sin filtrar `deleted_at`: queremos refrescar
+     * incluso filas soft-deleted, porque `update()` se puede llamar para
+     * "restaurar" un row marcado y necesitamos ver el estado real.
+     */
+    private function refreshFromDatabase(): void
+    {
+        $table = static::getTableName();
+        $pk = static::getPrimaryKeyField();
+        $pkColumn = Utils::camelToSnake($pk);
+        $pkValue = $this->{$pk} ?? null;
+
+        if ($pkValue === null) {
+            return;
+        }
+
+        $rows = Connection::getInstance()->query(
+            "SELECT * FROM {$table} WHERE {$pkColumn} = ? LIMIT 1",
+            [$pkValue]
+        );
+
+        if (empty($rows)) {
+            return;
+        }
+
+        $ref = new ReflectionClass($this);
+        foreach ($rows[0] as $column => $value) {
+            $camelName = Utils::snakeToCamel((string) $column);
+            if (!$ref->hasProperty($camelName)) {
+                continue;
+            }
+            $prop = $ref->getProperty($camelName);
+            if (!$prop->isPublic() || self::isIgnored($prop)) {
+                continue;
+            }
+            if ($value === null && $prop->getType() && !$prop->getType()->allowsNull()) {
+                continue;
+            }
+            $casted = self::castValueStatic($prop, $value);
+            if ($prop->isProtectedSet() || $prop->isPrivateSet()) {
+                $prop->setRawValueWithoutLazyInitialization($this, $casted);
+            } else {
+                $this->{$camelName} = $casted;
+            }
+        }
     }
 
     private function getColumnsAndValues(string $excludePk): array
